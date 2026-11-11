@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster-Futter</title>
+    <style>
+        :root {
+            --ink: #27304a;
+            --muted: #5b6480;
+            --card: #ffffff;
+            --line: #eadfca;
+            --blue: #2f6fed;
+            --red: #e0403a;
+            --green: #2e9e4f;
+            --radius: 20px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Nunito", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+            color: var(--ink);
+            background: linear-gradient(#fff6e5, #ffe6bf);
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .hidden { display: none !important; }
+
+        /* ---------- Kopfzeile ---------- */
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px 20px;
+            padding: 12px 20px;
+            background: #fff;
+            border-bottom: 3px solid var(--line);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        h1 { margin: 0; font-size: 1.6rem; }
+
+        #stats { display: flex; flex-wrap: wrap; gap: 8px 16px; font-weight: 700; align-items: center; }
+        #stats > span { background: #fff6e5; border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+
+        #muteBtn {
+            border: 0; background: #fff6e5; border-radius: 999px; font-size: 1.2rem;
+            padding: 4px 12px; cursor: pointer;
+        }
+
+        main { max-width: 1050px; margin: 0 auto; padding: 18px 16px 60px; }
+
+        button { font-family: inherit; }
+
+        .btn {
+            border: 0; border-radius: 999px; padding: 12px 24px; font-size: 1.05rem; font-weight: 800;
+            cursor: pointer; background: var(--blue); color: #fff; box-shadow: 0 3px 0 rgba(0, 0, 0, .18);
+        }
+        .btn.ghost { background: #fff; color: var(--ink); border: 2px solid var(--line); box-shadow: none; }
+        .btn:focus-visible, .monster:focus-visible, .mission:focus-visible, #muteBtn:focus-visible {
+            outline: 4px solid #ffb300; outline-offset: 2px;
+        }
+
+        /* ---------- Menü ---------- */
+        .intro { font-size: 1.1rem; margin: 6px 0 18px; }
+
+        #missionGrid, #profiGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 14px;
+        }
+
+        .mission {
+            text-align: left; background: var(--card); border: 3px solid var(--line); border-radius: var(--radius);
+            padding: 14px 16px; cursor: pointer; display: grid; gap: 4px; color: inherit;
+            transition: transform .12s, border-color .12s;
+        }
+        .mission:hover { transform: translateY(-3px); border-color: #ffb300; }
+        .mission .ico { font-size: 2rem; }
+        .mission .ttl { font-weight: 800; font-size: 1.1rem; }
+        .mission .dsc { color: var(--muted); font-size: .95rem; }
+        .mission .st { font-size: 1.1rem; letter-spacing: 2px; }
+
+        .foot { margin-top: 26px; color: var(--muted); font-size: .95rem; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .foot button { border: 0; background: transparent; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: .95rem; }
+
+        /* ---------- Merkkarten ---------- */
+        .learnCard {
+            background: var(--card); border-radius: var(--radius); border-left: 10px solid var(--line);
+            padding: 14px 18px; margin: 0 0 14px; font-size: 1.1rem; line-height: 1.5;
+        }
+        .learnCard h3 { margin: 0 0 6px; font-size: 1.25rem; }
+        .learnCard.cN { border-left-color: var(--blue); }
+        .learnCard.cV { border-left-color: var(--red); }
+        .learnCard.cA { border-left-color: var(--green); }
+        .learnCard.cX { border-left-color: #8e4fd1; }
+        .learnCard.cY { border-left-color: #f0a000; }
+        .n { color: var(--blue); font-weight: 800; }
+        .v { color: var(--red); font-weight: 800; }
+        .a { color: var(--green); font-weight: 800; }
+        .learnCard table { border-collapse: collapse; margin-top: 6px; }
+        .learnCard td, .learnCard th { border: 2px solid var(--line); padding: 6px 12px; text-align: left; }
+        .learnActions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+
+        /* ---------- Spiel ---------- */
+        .gamebar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .gamebar .mt { font-weight: 800; font-size: 1.15rem; }
+        .gamebar .cnt { color: var(--muted); font-weight: 700; }
+        .gamebar .btn { padding: 8px 16px; font-size: .95rem; }
+
+        #wordArea {
+            background: var(--card); border-radius: var(--radius); border: 3px solid var(--line);
+            padding: 14px 16px 16px; text-align: center; position: relative;
+        }
+
+        #prompt { color: var(--muted); font-weight: 700; margin-bottom: 8px; }
+
+        #sentence {
+            font-size: clamp(1.15rem, 3.4vw, 1.6rem); line-height: 2.1; margin: 4px 0 10px;
+            display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: center;
+        }
+        #sentence .w { padding: 0 6px; border-radius: 8px; border-bottom: 5px solid transparent; }
+        #sentence .w.cur { background: #fff0b8; border-bottom-color: #ffb300; font-weight: 800; }
+        #sentence .w.k-N { color: var(--blue); font-weight: 800; border-bottom-color: var(--blue); background: rgba(47, 111, 237, .12); }
+        #sentence .w.k-V { color: var(--red); font-weight: 800; border-bottom-color: var(--red); background: rgba(224, 64, 58, .12); }
+        #sentence .w.k-ADJ { color: var(--green); font-weight: 800; border-bottom-color: var(--green); background: rgba(46, 158, 79, .14); }
+        #sentence .w.k-OTH { color: #6b7685; }
+
+        #word {
+            display: inline-block; min-width: 120px; max-width: 100%;
+            font-size: clamp(1.8rem, 6vw, 2.8rem); font-weight: 900;
+            background: #fff0b8; border: 4px solid #ffb300; border-radius: 18px; padding: 10px 28px;
+            cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+            position: relative; z-index: 5; transition: box-shadow .12s;
+        }
+        #word.long { font-size: clamp(1.15rem, 3.8vw, 1.6rem); padding: 12px 20px; line-height: 1.35; }
+        #word.dragging { cursor: grabbing; z-index: 60; box-shadow: 0 12px 24px rgba(0, 0, 0, .25); transition: none; }
+        #word.wiggle { animation: wiggle .4s; }
+        #ctx { color: var(--muted); font-size: 1.05rem; margin-top: 6px; min-height: 1.4em; }
+
+        #feedback { min-height: 3.2em; margin-top: 8px; font-size: 1.12rem; font-weight: 700; line-height: 1.45; }
+        #feedback.good { color: #1d7a3a; }
+        #feedback.bad { color: #b3261e; }
+
+        #progressContainer { height: 14px; background: #fff; border-radius: 999px; margin: 12px 0; overflow: hidden; border: 2px solid var(--line); }
+        #progressBar { height: 100%; width: 0; background: linear-gradient(90deg, #ffb300, #ff7a00); transition: width .4s; }
+
+        #monsterArea {
+            display: grid; gap: 12px; margin-top: 6px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+
+        .monster {
+            background: var(--card); border: 4px solid var(--c, #ccc); border-radius: var(--radius);
+            padding: 8px 6px 10px; text-align: center; cursor: pointer; color: inherit;
+            transition: transform .12s, background .12s; position: relative;
+        }
+        .monster:hover { transform: translateY(-3px); }
+        .monster.hover { background: #fff7d6; transform: scale(1.05); }
+        .monster h2 { margin: 2px 0 0; font-size: 1.15rem; color: var(--c); filter: brightness(.82); }
+        .monster small { display: block; color: var(--muted); font-size: .85rem; min-height: 1.1em; }
+        .monster .key {
+            position: absolute; top: 6px; left: 8px; width: 22px; height: 22px; border-radius: 50%;
+            background: var(--c); color: #fff; font-size: .8rem; font-weight: 800; line-height: 22px;
+        }
+        .mon-svg { width: 96px; height: 106px; display: block; margin: 0 auto; }
+        .mon-svg .mouth { transform-origin: 60px 78px; transform: scaleY(.3); transition: transform .15s; }
+        .monster:hover .mouth, .monster.hover .mouth { transform: scaleY(.75); }
+        .monster.eat .mon-svg { animation: chomp .6s; }
+        .monster.eat .mouth { transform: scaleY(1.05); }
+        .monster.nope { animation: shake .45s; }
+
+        /* ---------- Auswahl-Aufgaben ---------- */
+        #choiceArea { display: grid; gap: 10px; max-width: 720px; margin: 6px auto 0; }
+        .choice {
+            position: relative; text-align: left; background: var(--card); border: 4px solid var(--line); border-radius: 16px;
+            padding: 12px 16px 12px 56px; font-size: 1.2rem; font-weight: 800; color: inherit; cursor: pointer; line-height: 1.35;
+            transition: transform .12s, background .12s, border-color .12s;
+        }
+        .choice:hover:not(:disabled) { transform: translateY(-2px); border-color: #ffb300; }
+        .choice:focus-visible { outline: 4px solid #ffb300; outline-offset: 2px; }
+        .choice .key {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%;
+            background: #ffb300; color: #fff; font-size: .95rem; line-height: 28px; text-align: center;
+        }
+        .choice.right { background: #dff5e5; border-color: #2e9e4f; }
+        .choice.wrong { background: #fde4e2; border-color: #e0403a; color: #8a2b26; opacity: .75; }
+        .choice:disabled { cursor: default; }
+        .choice.nope { animation: shake .45s; }
+        #word.static { cursor: default; touch-action: auto; }
+
+        /* ---------- Profi-Stufe ---------- */
+        .sectionTitle { margin: 34px 0 8px; font-size: 1.45rem; }
+        .mission.profi { border-color: #f0a000; background: #fffaf0; }
+        .mission.locked { opacity: .55; cursor: not-allowed; border-style: dashed; }
+        .mission.locked:hover { transform: none; border-color: var(--line); }
+        .lockInfo { background: #fff; border: 3px dashed #f0a000; border-radius: var(--radius); padding: 10px 16px; margin: 6px 0 14px; line-height: 1.45; }
+        .unlock { background: #fff3c4; border: 3px solid #f0a000; border-radius: var(--radius); padding: 10px 14px; font-size: 1.1rem; }
+        .learnCard table.conj th.sg { background: #d9f1f4; }
+        .learnCard table.conj th.pl { background: #fde6cf; }
+        .learnCard table.conj td.sg { background: #effafb; }
+        .learnCard table.conj td.pl { background: #fff4e8; }
+        .learnCard small { color: var(--muted); font-weight: 400; }
+
+        /* ---------- Ergebnis ---------- */
+        #result { text-align: center; }
+        #result .box { background: var(--card); border-radius: var(--radius); border: 3px solid var(--line); padding: 20px; }
+        #result .bigstars { font-size: 3rem; letter-spacing: 6px; }
+        .review { text-align: left; margin: 14px auto 0; max-width: 700px; }
+        .review li { margin-bottom: 8px; line-height: 1.45; }
+        .resActions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 18px; }
+
+        #toast {
+            position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(80px);
+            background: #27304a; color: #fff; padding: 12px 22px; border-radius: 999px; font-weight: 800;
+            opacity: 0; transition: all .35s; z-index: 100; pointer-events: none;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        @keyframes chomp { 0% { transform: scale(1); } 30% { transform: scale(1.18, .88); } 60% { transform: scale(.94, 1.1); } 100% { transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
+        @keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+
+        @media (max-width: 560px) {
+            #monsterArea { grid-template-columns: repeat(2, 1fr); }
+            .mon-svg { width: 76px; height: 84px; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>🍽️ Monster-Futter</h1>
+        <div id="stats">
+            <span>⭐ Sterne: <span id="stars">0</span></span>
+            <span>🏆 Level: <span id="level">1</span></span>
+            <span>🎯 Punkte: <span id="score">0</span></span>
+            <span>👑 Highscore: <span id="highscore">0</span></span>
+            <button id="muteBtn" aria-label="Ton an oder aus" title="Ton an/aus">🔊</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Menü -->
+        <section id="menu">
+            <p class="intro"><b>Willkommen!</b> Die Monster haben Hunger auf Wörter. Wähle ein Futter-Spiel. Lies vorher die
+                Merkkarte – dann klappt es noch besser! Ziehe das Wort zum richtigen Monster oder tippe das Monster an. Bei manchen Aufgaben tippst du die richtige Antwort an.
+                Schaffst du alle Aufgaben mit 3 Sternen, wartet die Profi-Stufe auf dich!</p>
+            <div id="missionGrid"></div>
+            <div id="profiBox">
+                <h2 class="sectionTitle">🏅 Profi-Stufe</h2>
+                <div id="profiInfo"></div>
+                <div id="profiGrid"></div>
+            </div>
+            <div class="foot">
+                <span>Tipp: Mit den Zifferntasten 1, 2, 3 … kannst du die Monster auch füttern.</span>
+                <button id="resetBtn">Fortschritt zurücksetzen</button>
+            </div>
+        </section>
+
+        <!-- Merkkarten -->
+        <section id="learn" class="hidden"></section>
+
+        <!-- Spiel -->
+        <section id="game" class="hidden">
+            <div class="gamebar">
+                <button class="btn ghost" id="backBtn">← Menü</button>
+                <span class="mt" id="missionTitle"></span>
+                <span class="cnt" id="counter"></span>
+                <button class="btn ghost" id="helpBtn">📖 Merkkarte</button>
+            </div>
+
+            <section id="wordArea">
+                <div id="prompt"></div>
+                <div id="sentence" class="hidden"></div>
+                <div id="word" role="img" aria-label="Wort zum Füttern">Hund</div>
+                <div id="ctx"></div>
+                <div id="feedback" aria-live="polite"></div>
+            </section>
+
+            <section id="progressContainer">
+                <div id="progressBar"></div>
+            </section>
+
+            <section id="monsterArea"></section>
+            <section id="choiceArea" class="hidden"></section>
+        </section>
+
+        <!-- Ergebnis -->
+        <section id="result" class="hidden"></section>
+    </main>
+
+    <div id="toast" role="status"></div>
+
+    <script>
+        'use strict';
+
+        /* =====================================================================
+           Hilfsfunktionen
+        ===================================================================== */
+        const $ = (s, r = document) => r.querySelector(s);
+        const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+        const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+        const pick = a => a[Math.floor(Math.random() * a.length)];
+
+        /* =====================================================================
+           Speicherstand (localStorage, falls erlaubt)
+        ===================================================================== */
+        const KEY = 'monsterFutter.v2';
+        let save = { xp: 0, highscore: 0, stars: {} };
+        try { const raw = localStorage.getItem(KEY); if (raw) save = Object.assign(save, JSON.parse(raw)); } catch (e) { }
+        const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { } };
+        const levelOf = xp => 1 + Math.floor(xp / 100);
+
+        /* =====================================================================
+           Töne (Web Audio – keine Dateien nötig)
+        ===================================================================== */
+        let ac = null, muted = false;
+        function tone(f, t0, d, type = 'sine', v = 0.16) {
+            const o = ac.createOscillator(), g = ac.createGain();
+            o.type = type; o.frequency.value = f;
+            g.gain.setValueAtTime(0.0001, ac.currentTime + t0);
+            g.gain.exponentialRampToValueAtTime(v, ac.currentTime + t0 + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + t0 + d);
+            o.connect(g); g.connect(ac.destination);
+            o.start(ac.currentTime + t0); o.stop(ac.currentTime + t0 + d + 0.05);
+        }
+        function sound(kind) {
+            if (muted) return;
+            try {
+                ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+                if (ac.state === 'suspended') ac.resume();
+                if (kind === 'eat') { tone(523, 0, .12); tone(659, .1, .16); }
+                if (kind === 'wrong') { tone(220, 0, .22, 'triangle', .2); }
+                if (kind === 'level') { tone(523, 0, .14); tone(659, .13, .14); tone(784, .26, .24); }
+            } catch (e) { }
+        }
+
+        /* =====================================================================
+           Monster-Arten (Farben: Nomen blau, Verb rot, Adjektiv grün
+           – wie beim Markieren im Text)
+        ===================================================================== */
+        const KIND = {
+            N: { name: 'Nomen', sub: 'Namenwörter', color: '#2f6fed' },
+            V: { name: 'Verb', sub: 'Tunwörter', color: '#e0403a' },
+            ADJ: { name: 'Adjektiv', sub: 'Wiewörter', color: '#2e9e4f' },
+            ART: { name: 'Artikel', sub: 'Begleiter', color: '#f0a000' },
+            PRO: { name: 'Personalpronomen', sub: 'persönliche Fürwörter', color: '#8e4fd1' },
+            OTH: { name: 'Andere Wörter', sub: 'nicht markieren', color: '#6b7685' },
+            IMP: { name: 'Imperativ', sub: 'Befehlsform', color: '#d6409f' },
+            DER: { name: 'der', sub: 'männlich', color: '#139aab' },
+            DIE: { name: 'die', sub: 'weiblich', color: '#d6409f' },
+            DAS: { name: 'das', sub: 'sächlich', color: '#e8821a' },
+            GED: { name: 'Gefühl oder Gedanke', sub: 'nicht anfassbar', color: '#8e4fd1' },
+            DING: { name: 'Lebewesen oder Ding', sub: 'anfassbar', color: '#d9822b' },
+            PL: { name: 'Mehrzahl möglich', sub: 'ein Hund – zwei Hunde', color: '#139aab' },
+            NOPL: { name: 'Keine Mehrzahl', sub: 'nur Einzahl', color: '#6b7685' },
+            AUSS: { name: 'Aussagesatz', sub: 'Punkt  .', color: '#139aab' },
+            FRAGE: { name: 'Fragesatz', sub: 'Fragezeichen  ?', color: '#f0a000' },
+            AUSRUF: { name: 'Ausrufesatz', sub: 'Gefühl, meist  !', color: '#d6409f' },
+            AUFF: { name: 'Aufforderungssatz', sub: 'Imperativ, meist  !', color: '#8e4fd1' },
+            SG: { name: 'Einzahl', sub: 'Singular – eine Person', color: '#139aab' },
+            PLU: { name: 'Mehrzahl', sub: 'Plural – mehrere Personen', color: '#e8821a' }
+        };
+
+        function shade(hex, p) {
+            const n = parseInt(hex.slice(1), 16);
+            const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(x => Math.round(x * (1 - p)));
+            return '#' + c.map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+
+        function monsterSVG(color, v) {
+            const d = shade(color, .3);
+            const acc = [
+                `<path d="M30 26 L22 6 L46 18Z M90 26 L98 6 L74 18Z" fill="${d}"/>`,
+                `<path d="M60 18 V4" stroke="${d}" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="5" r="6" fill="#ffd54a" stroke="${d}" stroke-width="2"/>`,
+                `<circle cx="26" cy="28" r="12" fill="${color}"/><circle cx="94" cy="28" r="12" fill="${color}"/>`,
+                `<path d="M36 20 L44 4 L52 18 L60 2 L68 18 L76 4 L84 20Z" fill="${d}"/>`
+            ][v % 4];
+            return `<svg class="mon-svg" viewBox="0 0 120 134" aria-hidden="true">
+                ${acc}
+                <rect x="14" y="16" width="92" height="108" rx="46" fill="${color}"/>
+                <ellipse cx="60" cy="104" rx="34" ry="18" fill="#fff" opacity=".18"/>
+                <circle cx="44" cy="50" r="13" fill="#fff"/><circle cx="76" cy="50" r="13" fill="#fff"/>
+                <circle cx="46" cy="52" r="6" fill="#222"/><circle cx="74" cy="52" r="6" fill="#222"/>
+                <g class="mouth"><ellipse cx="60" cy="90" rx="27" ry="17" fill="#3b1220"/><ellipse cx="60" cy="100" rx="15" ry="7" fill="#ff7a8a"/><path d="M38 78 h9 l-4.5 10z M73 78 h9 l-4.5 10z" fill="#fff"/></g>
+                <ellipse cx="38" cy="128" rx="14" ry="6" fill="${d}"/><ellipse cx="82" cy="128" rx="14" ry="6" fill="${d}"/>
+            </svg>`;
+        }
+
+        /* =====================================================================
+           Übungswörter (Wortarten)
+        ===================================================================== */
+        const noun = (w, art, extra) => ({ t: w, k: 'N', why: extra || `„${w}“ ist ein Nomen. Du kannst „${art} ${w}“ sagen.` });
+        const verb = (w, ich, du) => ({ t: w, k: 'V', why: `„${w}“ ist ein Verb. Es sagt, was jemand tut: ${ich}, ${du}.` });
+        const adj = (w, phrase) => ({ t: w, k: 'ADJ', why: `„${w}“ ist ein Adjektiv. Es sagt, wie etwas ist: ${phrase}.` });
+
+        const NOUNS = [
+            noun('Katze', 'die'), noun('Schule', 'die'), noun('Tisch', 'der'), noun('Apfel', 'der'),
+            noun('Garten', 'der'), noun('Buch', 'das'), noun('Jacke', 'die'), noun('Mond', 'der'),
+            noun('Brot', 'das'), noun('Insel', 'die'), noun('Lehrerin', 'die'), noun('Kuchen', 'der'),
+            noun('Lena', '', '„Lena“ ist der Name einer Person. Auch Namen sind Nomen – man schreibt sie groß.'),
+            noun('Freude', 'die', '„Freude“ ist ein Nomen. Du kannst „die Freude“ sagen. Auch Gefühle sind Nomen.')
+        ];
+        const VERBS = [
+            verb('malen', 'ich male', 'du malst'), verb('schwimmen', 'ich schwimme', 'du schwimmst'),
+            verb('lachen', 'ich lache', 'du lachst'), verb('schlafen', 'ich schlafe', 'du schläfst'),
+            verb('singen', 'ich singe', 'du singst'), verb('bauen', 'ich baue', 'du baust'),
+            verb('rennen', 'ich renne', 'du rennst'), verb('springen', 'ich springe', 'du springst'),
+            verb('lesen', 'ich lese', 'du liest'), verb('kochen', 'ich koche', 'du kochst'),
+            verb('fliegen', 'ich fliege', 'du fliegst'), verb('tanzen', 'ich tanze', 'du tanzt'),
+            verb('hören', 'ich höre', 'du hörst'), verb('rufen', 'ich rufe', 'du rufst')
+        ];
+        const ADJS = [
+            adj('groß', 'ein großer Baum'), adj('kalt', 'eine kalte Suppe'), adj('lustig', 'ein lustiger Clown'),
+            adj('schnell', 'ein schneller Zug'), adj('rund', 'ein runder Tisch'), adj('süß', 'ein süßer Kuchen'),
+            adj('müde', 'ein müdes Kind'), adj('hell', 'ein helles Zimmer'), adj('weich', 'ein weiches Kissen'),
+            adj('bunt', 'ein buntes Bild'), adj('laut', 'ein lauter Knall'), adj('leise', 'eine leise Stimme'),
+            adj('glatt', 'ein glatter Stein'), adj('klug', 'ein kluges Mädchen')
+        ];
+        const ARTS = [
+            { t: 'der', ctx: 'der Hund', why: '„der“ ist ein Artikel (Begleiter). Er steht vor einem Nomen: der Hund.' },
+            { t: 'die', ctx: 'die Katze', why: '„die“ ist ein Artikel (Begleiter). Er steht vor einem Nomen: die Katze.' },
+            { t: 'das', ctx: 'das Haus', why: '„das“ ist ein Artikel (Begleiter). Er steht vor einem Nomen: das Haus.' },
+            { t: 'ein', ctx: 'ein Apfel', why: '„ein“ ist ein Artikel (Begleiter). Er steht vor einem Nomen: ein Apfel.' },
+            { t: 'eine', ctx: 'eine Tasche', why: '„eine“ ist ein Artikel (Begleiter). Er steht vor einem Nomen: eine Tasche.' }
+        ].map(o => ({ ...o, k: 'ART' }));
+        const PROS = [
+            { t: 'ich', ctx: 'Ich lache.', why: '„ich“ ist ein Personalpronomen. Du sagst „ich“, wenn du von dir selbst sprichst.' },
+            { t: 'du', ctx: 'Du malst.', why: '„du“ ist ein Personalpronomen. Du sagst „du“, wenn du mit einer Person sprichst.' },
+            { t: 'er', ctx: 'Er schläft.', why: '„er“ ist ein Personalpronomen. Es steht für ein männliches Nomen: Der Hund schläft. – Er schläft.' },
+            { t: 'sie', ctx: 'Sie singt.', why: '„sie“ ist ein Personalpronomen. Es steht für ein weibliches Nomen: Die Frau singt. – Sie singt.' },
+            { t: 'es', ctx: 'Es lacht.', why: '„es“ ist ein Personalpronomen. Es steht für ein sächliches Nomen: Das Kind lacht. – Es lacht.' },
+            { t: 'wir', ctx: 'Wir bauen.', why: '„wir“ ist ein Personalpronomen. Es steht für mehrere Personen, zu denen ich selbst gehöre.' }
+        ].map(o => ({ ...o, k: 'PRO' }));
+
+        /* ---------- Sätze: Wort:Art:Zusatz  (N=Nomen, V=Verb, A=Adjektiv, O=Andere) ---------- */
+        const SENTENCES = [
+            'Die:O:Artikel kleine:A:klein Katze:N:die schläft:V:schlafen auf:O:Verhältniswort dem:O:Artikel weichen:A:weich Sofa.:N:das',
+            'Lena:N:Name malt:V:malen ein:O:Artikel buntes:A:bunt Bild.:N:das',
+            'Der:O:Artikel kalte:A:kalt Wind:N:der weht:V:wehen über:O:Verhältniswort den:O:Artikel Hügel.:N:der',
+            'Im:O:Verhältniswort Garten:N:der blühen:V:blühen die:O:Artikel roten:A:rot Rosen.:N:die',
+            'Jonas:N:Name isst:V:essen einen:O:Artikel saftigen:A:saftig Apfel.:N:der',
+            'Die:O:Artikel Kinder:N:die bauen:V:bauen eine:O:Artikel hohe:A:hoch Sandburg.:N:die',
+            'Das:O:Artikel Wasser:N:das ist:V:sein kalt.:A:kalt',
+            'Mia:N:Name singt:V:singen und:O:Bindewort tanzt.:V:tanzen',
+            'Die:O:Artikel müde:A:müde Lehrerin:N:die liest:V:lesen ein:O:Artikel dickes:A:dick Buch.:N:das',
+            'Wir:O:Pronomen fahren:V:fahren zum:O:Verhältniswort See.:N:der',
+            'Der:O:Artikel alte:A:alt Bus:N:der wartet:V:warten vor:O:Verhältniswort der:O:Artikel Schule.:N:die',
+            'Der:O:Artikel Hund:N:der ist:V:sein müde:A:müde und:O:Bindewort hungrig.:A:hungrig'
+        ];
+
+        function parseSentence(str) {
+            return str.split(' ').map(tok => {
+                const [txt, c, label] = tok.split(':');
+                const t = txt.replace(/[.!?,]+$/, '');
+                const k = { N: 'N', NV: 'N', NA: 'N', V: 'V', A: 'ADJ', O: 'OTH' }[c];
+                return { txt, t, k, why: sentWhy(t, c, label) };
+            });
+        }
+        function sentWhy(w, c, label) {
+            if (c === 'NV') return `„${w}“ ist ein Nomen. Du kannst „${label.replace('_', ' ')}“ sagen (Artikelprobe). Das Verb „${w.toLowerCase()}“ wird hier zum Nomen – darum schreibt man es groß. Nomen markierst du blau.`;
+            if (c === 'NA') return `„${w}“ ist ein Nomen. Du kannst „${label.replace('_', ' ')}“ sagen (Artikelprobe). Das Adjektiv „${w.toLowerCase()}“ wird hier zum Nomen – darum schreibt man es groß. Nomen markierst du blau.`;
+            if (c === 'N') return label === 'Name'
+                ? `„${w}“ ist der Name einer Person. Auch Namen sind Nomen – du markierst sie blau.`
+                : `„${w}“ ist ein Nomen („${label.includes('_') ? label.replace('_', ' ') : label + ' ' + w}“). Nomen markierst du blau.${/(ig|lich)$/.test(w) ? ' Achtung: Auch Nomen können auf -ig enden. Die Artikelprobe zeigt es dir.' : ''}`;
+            if (c === 'V') return label === 'sein'
+                ? `„${w}“ ist ein Verb (Grundform: sein – ich bin, du bist, er ist). Verben markierst du rot.`
+                : `„${w}“ ist ein Verb (Grundform: ${label}). Verben markierst du rot.`;
+            if (c === 'A') return `„${w}“ ist ein Adjektiv (Grundform: ${label}). Es sagt, wie etwas ist. Adjektive markierst du grün.`;
+            const kind = {
+                Artikel: 'ein Artikel', Verhältniswort: 'ein Verhältniswort (Präposition)',
+                Bindewort: 'ein Bindewort (Konjunktion)', Pronomen: 'ein Personalpronomen'
+            }[label];
+            return `„${w}“ ist ${kind}. Das markierst du nicht.`;
+        }
+
+        /* ---------- Nomen mit Artikel ---------- */
+        const gn = (k, art, w, extra) => ({
+            t: w, k,
+            why: `Es heißt „${art} ${w}“ (${{ der: 'ein', die: 'eine', das: 'ein' }[art]} ${w}). ${extra || ''}`.trim(),
+            good: `Es heißt „${art} ${w}“.`
+        });
+        const GENDER = [
+            ...['Stuhl', 'Apfel', 'Mond', 'Hund', 'Regen', 'Schuh', 'Baum', 'Kuchen', 'Garten', 'Zug'].map(w => gn('DER', 'der', w, 'Das Nomen ist männlich.')),
+            ...['Tasche', 'Sonne', 'Lampe', 'Katze', 'Tür', 'Uhr', 'Nase', 'Jacke', 'Schule', 'Insel'].map(w => gn('DIE', 'die', w, 'Das Nomen ist weiblich.')),
+            ...['Haus', 'Auto', 'Fenster', 'Buch', 'Kind', 'Eis', 'Bett', 'Sofa', 'Brot'].map(w => gn('DAS', 'das', w, 'Das Nomen ist sächlich.')),
+            gn('DAS', 'das', 'Mädchen', 'Das Nomen ist sächlich – auch wenn es um ein weibliches Kind geht.')
+        ];
+
+        /* ---------- Gefühle/Gedanken ---------- */
+        const fg = (art, w, was) => ({ t: `${art} ${w}`, k: 'GED', why: `„${art} ${w}“ ist ${was}. Das kann man nicht anfassen.` });
+        const dg = (art, w, was) => ({ t: `${art} ${w}`, k: 'DING', why: `„${art} ${w}“ ist ${was}. Das kann man sehen oder anfassen.` });
+        const FEEL = [
+            fg('die', 'Freude', 'ein Gefühl'), fg('die', 'Wut', 'ein Gefühl'), fg('die', 'Angst', 'ein Gefühl'),
+            fg('die', 'Trauer', 'ein Gefühl'), fg('der', 'Stolz', 'ein Gefühl'), fg('das', 'Mitleid', 'ein Gefühl'),
+            fg('die', 'Hoffnung', 'ein Gefühl'), fg('die', 'Langeweile', 'ein Gefühl'), fg('das', 'Heimweh', 'ein Gefühl'),
+            fg('der', 'Ärger', 'ein Gefühl'), fg('die', 'Idee', 'ein Gedanke'), fg('der', 'Wunsch', 'ein Gedanke'),
+            fg('die', 'Fantasie', 'ein Gedanke'), fg('die', 'Meinung', 'ein Gedanke'),
+            dg('der', 'Hund', 'ein Lebewesen'), dg('der', 'Tisch', 'ein Ding'), dg('die', 'Schere', 'ein Ding'),
+            dg('der', 'Rucksack', 'ein Ding'), dg('der', 'Baum', 'eine Pflanze'), dg('die', 'Lehrerin', 'ein Mensch'),
+            dg('die', 'Hose', 'ein Ding'), dg('das', 'Brot', 'ein Ding'), dg('das', 'Haus', 'ein Ding'),
+            dg('der', 'Stuhl', 'ein Ding'), dg('die', 'Katze', 'ein Tier'), dg('das', 'Buch', 'ein Ding')
+        ];
+
+        /* ---------- Einzahl / Mehrzahl ---------- */
+        const pl = (art, w, p) => ({ t: `${art} ${w}`, k: 'PL', why: `Von „${art} ${w}“ kann man eine Mehrzahl bilden: ${p}.`, good: `Mehrzahl: ${p}.` });
+        const np = (art, w, extra) => ({ t: `${art} ${w}`, k: 'NOPL', why: `Von „${art} ${w}“ kann man keine Mehrzahl bilden. ${extra}`.trim() });
+        const PLURAL = [
+            pl('der', 'Hund', 'die Hunde'), pl('die', 'Idee', 'die Ideen'), pl('der', 'Wunsch', 'die Wünsche'),
+            pl('der', 'Tisch', 'die Tische'), pl('der', 'Apfel', 'die Äpfel'), pl('das', 'Haus', 'die Häuser'),
+            pl('das', 'Zimmer', 'die Zimmer'), pl('die', 'Meinung', 'die Meinungen'), pl('die', 'Hoffnung', 'die Hoffnungen'),
+            pl('die', 'Angst', 'die Ängste'), pl('die', 'Uhr', 'die Uhren'), pl('das', 'Buch', 'die Bücher'),
+            pl('der', 'Baum', 'die Bäume'), pl('die', 'Lehrerin', 'die Lehrerinnen'), pl('das', 'Fenster', 'die Fenster'),
+            np('die', 'Wut', 'Man sagt nur „die Wut“.'), np('der', 'Stolz', 'Man sagt nur „der Stolz“.'),
+            np('das', 'Mitleid', 'Man sagt nur „das Mitleid“.'), np('die', 'Langeweile', 'Man sagt nur „die Langeweile“.'),
+            np('das', 'Heimweh', 'Man sagt nur „das Heimweh“.'), np('der', 'Ärger', 'Man sagt nur „der Ärger“.'),
+            np('der', 'Schnee', 'Man sagt nur „der Schnee“.'), np('das', 'Obst', 'Man sagt nur „das Obst“.')
+        ];
+
+        /* ---------- Satzarten ---------- */
+        const SA = (k, arr) => arr.map(t => ({ t, k }));
+        const SATZ = [
+            ...SA('AUSS', ['Die Sonne scheint über dem See.', 'Mein Bruder spielt Gitarre.', 'Im Park wachsen viele Bäume.', 'Der Zug fährt um acht Uhr ab.', 'Lena hat einen kleinen Hund.'])
+                .map(o => ({ ...o, why: 'Hier wird etwas mitgeteilt. Das ist ein Aussagesatz, am Ende steht ein Punkt.' })),
+            ...SA('FRAGE', ['Wo wohnt deine Oma?', 'Kommst du mit ins Schwimmbad?', 'Wie alt ist dein Bruder?', 'Magst du Erdbeeren?', 'Was machst du am Wochenende?'])
+                .map(o => ({ ...o, why: 'Hier wird etwas gefragt. Das ist ein Fragesatz, am Ende steht ein Fragezeichen.' })),
+            ...SA('AUSRUF', ['Das ist ja unglaublich!', 'Wie laut der Donner grollt!', 'Was für ein riesiger Hund!', 'Das schmeckt aber lecker!', 'Wie schön der Regenbogen leuchtet!'])
+                .map(o => ({ ...o, why: 'Hier zeigt jemand ein starkes Gefühl, zum Beispiel Staunen oder Freude. Das ist ein Ausrufesatz.' })),
+            ...SA('AUFF', ['Putz bitte deine Schuhe!', 'Hol den Eimer!', 'Schließt die Tür!', 'Gib mir bitte den Stift!', 'Lest den Text leise!', 'Wasch dir die Hände!'])
+                .map(o => ({ ...o, why: `Hier soll jemand etwas tun. Der Satz beginnt mit „${o.t.split(' ')[0]}“ – das ist die Befehlsform (Imperativ). Das ist ein Aufforderungssatz.` }))
+        ];
+
+        /* ---------- Fachbegriffe (jeweils nur EINE deutsche Bedeutung) ---------- */
+        const FB = [
+            { t: 'Namenwörter', k: 'N', why: '„Namenwörter“ ist das deutsche Wort für Nomen.' },
+            { t: 'Tunwörter', k: 'V', why: '„Tunwörter“ ist das deutsche Wort für Verben.' },
+            { t: 'Wiewörter', k: 'ADJ', why: '„Wiewörter“ ist das deutsche Wort für Adjektive.' },
+            { t: 'persönliche Fürwörter', k: 'PRO', why: '„persönliche Fürwörter“ ist das deutsche Wort für Personalpronomen.' },
+            { t: 'Befehlsform', k: 'IMP', why: '„Befehlsform“ ist das deutsche Wort für Imperativ.' },
+            { t: 'Hund · Katze · Freude', k: 'N', prompt: 'Zu welchem Fachbegriff passen diese Wörter?', why: 'Hund, Katze und Freude sind Nomen (Namenwörter).' },
+            { t: 'malen · lachen · singen', k: 'V', prompt: 'Zu welchem Fachbegriff passen diese Wörter?', why: 'Malen, lachen und singen sind Verben (Tunwörter).' },
+            { t: 'klein · bunt · schnell', k: 'ADJ', prompt: 'Zu welchem Fachbegriff passen diese Wörter?', why: 'Klein, bunt und schnell sind Adjektive (Wiewörter).' },
+            { t: 'ich · du · wir', k: 'PRO', prompt: 'Zu welchem Fachbegriff passen diese Wörter?', why: 'Ich, du und wir sind Personalpronomen (persönliche Fürwörter).' },
+            { t: 'Komm! · Lest! · Mal!', k: 'IMP', prompt: 'Zu welchem Fachbegriff passen diese Wörter?', why: 'Das sind Befehle an jemanden. So sieht der Imperativ (die Befehlsform) aus.' }
+        ];
+
+        /* =====================================================================
+           Auswahl-Aufgaben (mehrere Antworten zum Antippen)
+           wrongs: [[Text, Rückmeldung], …]
+        ===================================================================== */
+        const choice = (t, right, wrongs, why, extra = {}) => ({
+            t, why, good: extra.good, ctx: extra.ctx, prompt: extra.prompt,
+            opts: shuffle([{ t: right, ok: true }, ...wrongs.map(([x, f]) => ({ t: x, ok: false, f }))])
+        });
+
+        /* ---------- Imperativ: Aufforderungssatz umstellen ---------- */
+        // [Satz, richtiger Imperativsatz, Aussagesatz (falsch), Fragesatz (falsch), Anrede]
+        const IMP_DATA = [
+            ['Du sollst deine Hände waschen.', 'Wasch deine Hände!', 'Du wäschst deine Hände.', 'Wäschst du deine Hände?', 'du'],
+            ['Du sollst Brot kaufen.', 'Kauf Brot!', 'Du kaufst Brot.', 'Kaufst du Brot?', 'du'],
+            ['Ihr sollt die Aufgaben lesen.', 'Lest die Aufgaben!', 'Ihr lest die Aufgaben.', 'Lest ihr die Aufgaben?', 'ihr'],
+            ['Du sollst leise sein.', 'Sei leise!', 'Du bist leise.', 'Bist du leise?', 'du'],
+            ['Ihr sollt den Müll sammeln.', 'Sammelt den Müll!', 'Ihr sammelt den Müll.', 'Sammelt ihr den Müll?', 'ihr'],
+            ['Du sollst die Fenster öffnen.', 'Öffne die Fenster!', 'Du öffnest die Fenster.', 'Öffnest du die Fenster?', 'du'],
+            ['Ihr sollt leise sein.', 'Seid leise!', 'Ihr seid leise.', 'Seid ihr leise?', 'ihr'],
+            ['Du sollst den Hund rufen.', 'Ruf den Hund!', 'Du rufst den Hund.', 'Rufst du den Hund?', 'du'],
+            ['Ihr sollt ein Lied singen.', 'Singt ein Lied!', 'Ihr singt ein Lied.', 'Singt ihr ein Lied?', 'ihr'],
+            ['Du sollst die Hausaufgaben machen.', 'Mach die Hausaufgaben!', 'Du machst die Hausaufgaben.', 'Machst du die Hausaufgaben?', 'du'],
+            ['Ihr sollt die Blumen gießen.', 'Gießt die Blumen!', 'Ihr gießt die Blumen.', 'Gießt ihr die Blumen?', 'ihr'],
+            ['Du sollst den Fisch fangen.', 'Fang den Fisch!', 'Du fängst den Fisch.', 'Fängst du den Fisch?', 'du']
+        ];
+        const buildImp = () => shuffle(IMP_DATA).slice(0, 8).map(([q, r, a, f, who]) => choice(q, r, [
+            [a, `Das ist ein Aussagesatz. Bei der Befehlsform steht das Verb am Anfang und „${who}“ fällt weg.`],
+            [f, 'Das ist ein Fragesatz. Er endet mit einem Fragezeichen. Ein Aufforderungssatz sagt, was jemand tun soll.']
+        ], `Bei der Befehlsform steht das Verb am Anfang, das Wort „${who}“ fällt weg und am Ende steht ein Ausrufezeichen.`, {
+            good: `So lautet der Aufforderungssatz: ${r}`,
+            prompt: 'Stelle den Satz um. Welcher Satz ist ein Aufforderungssatz in der Befehlsform (Imperativ)?'
+        }));
+
+        /* ---------- Steigern ---------- */
+        // [Grundstufe, Höherstufe, Höchststufe, falsche Höherstufe, falsche Höchststufe, Hinweis]
+        const STEIG = [
+            ['schnell', 'schneller', 'schnellsten', 'schneller', 'schnellesten', 'Du hängst -er und -sten an.'],
+            ['alt', 'älter', 'ältesten', 'alter', 'altesten', 'Aus a wird ä. In der Höchststufe kommt nach dem t ein e dazu.'],
+            ['groß', 'größer', 'größten', 'großer', 'großten', 'Aus o wird ö.'],
+            ['klein', 'kleiner', 'kleinsten', 'kleiner', 'kleinesten', 'Du hängst nur -er und -sten an.'],
+            ['laut', 'lauter', 'lautesten', 'lauter', 'lautsten', 'Nach dem t kommt in der Höchststufe ein e dazu.'],
+            ['jung', 'jünger', 'jüngsten', 'junger', 'jungsten', 'Aus u wird ü.'],
+            ['gut', 'besser', 'besten', 'guter', 'gutesten', 'Dieses Adjektiv ist besonders. Du musst es dir merken.'],
+            ['hoch', 'höher', 'höchsten', 'hocher', 'hochsten', 'Dieses Adjektiv ist besonders: Das c fällt in der Höherstufe weg.'],
+            ['süß', 'süßer', 'süßesten', 'süßer', 'süßsten', 'Nach ß kommt in der Höchststufe ein e dazu.'],
+            ['stark', 'stärker', 'stärksten', 'starker', 'starksten', 'Aus a wird ä.'],
+            ['lustig', 'lustiger', 'lustigsten', 'lustiger', 'lustigesten', 'Du hängst nur -er und -sten an.'],
+            ['hell', 'heller', 'hellsten', 'heller', 'hellesten', 'Du hängst nur -er und -sten an.'],
+            ['kalt', 'kälter', 'kältesten', 'kalter', 'kaltesten', 'Aus a wird ä. In der Höchststufe kommt nach dem t ein e dazu.'],
+            ['nah', 'näher', 'nächsten', 'naher', 'nahsten', 'Dieses Adjektiv ist besonders. Du musst es dir merken.'],
+            ['warm', 'wärmer', 'wärmsten', 'warmer', 'warmsten', 'Aus a wird ä.']
+        ];
+        // Steigerungsformen der Adjektive, die nur als falsche Antwort vorkommen
+        const STF = {
+            klug: ['klüger', 'klügsten'], leise: ['leiser', 'leisesten'], stark: ['stärker', 'stärksten'], warm: ['wärmer', 'wärmsten'],
+            lang: ['länger', 'längsten'], kalt: ['kälter', 'kältesten'], schön: ['schöner', 'schönsten'], hoch: ['höher', 'höchsten']
+        };
+        // [nicht steigerbares Adjektiv, [zwei steigerbare Adjektive], Erklärung]
+        const NOSTEIG = [
+            ['golden', ['klug', 'leise'], 'Etwas ist entweder aus Gold oder nicht. Ein Mehr oder Weniger gibt es nicht.'],
+            ['täglich', ['stark', 'warm'], 'Was täglich passiert, passiert jeden Tag. Ein Mehr oder Weniger gibt es nicht.'],
+            ['viereckig', ['lang', 'kalt'], 'Ein Viereck hat genau vier Ecken. Mehr oder weniger Ecken gibt es nicht.'],
+            ['einzig', ['schön', 'hoch'], '„einzig“ heißt: nur einer. Mehr als einer geht nicht.']
+        ];
+        const stfText = w => `„${w}“ lässt sich steigern: ${w} – ${STF[w][0]} – am ${STF[w][1]}.`;
+        function buildSteigern() {
+            const out = shuffle(STEIG).slice(0, 7).map(([g, k, s, ek, es, note]) => choice(
+                `Steigere: ${g}`, `${g} – ${k} – am ${s}`, [
+                [`${g} – mehr ${g} – am meisten ${g}`, 'Adjektive steigerst du nicht mit „mehr“ und „am meisten“. Du hängst -er und -sten an.'],
+                [`${g} – ${ek} – am ${es}`, 'Hier stimmt ein Wortteil nicht: der Umlaut oder die Endung. Schau genau hin!']
+            ], `${g} – ${k} – am ${s}. ${note}`, {
+                good: 'Richtig gesteigert.', ctx: 'Grundstufe – Höherstufe – Höchststufe',
+                prompt: 'Wie wird das Adjektiv richtig gesteigert?'
+            }));
+            shuffle(NOSTEIG).slice(0, 2).forEach(([w, others, note]) => out.push(choice(
+                'Welches Adjektiv lässt sich NICHT steigern?', w, others.map(o => [o, stfText(o)]),
+                `„${w}“ lässt sich nicht steigern. ${note}`, { good: `„${w}“ lässt sich nicht steigern.`, prompt: 'Tippe die richtige Antwort an.' }
+            )));
+            const [w, others, note] = pick(NOSTEIG);
+            const can = pick(Object.keys(STF).filter(x => x !== 'hoch'));
+            out.push(choice(
+                'Welches Adjektiv lässt sich steigern?', can, [[w, `„${w}“ lässt sich nicht steigern. ${note}`], [pick(NOSTEIG.filter(x => x[0] !== w))[0], 'Dieses Adjektiv lässt sich nicht steigern. Es gibt kein Mehr oder Weniger.']],
+                stfText(can), { good: `„${can}“ lässt sich steigern.`, prompt: 'Tippe die richtige Antwort an.' }
+            ));
+            return shuffle(out);
+        }
+
+        /* ---------- Verben beugen ---------- */
+        const NAMES6 = ['ich', 'du', 'er/sie/es', 'wir', 'ihr', 'sie'];
+        const PERS = [
+            { p: 'ich', i: 0 }, { p: 'du', i: 1 },
+            { p: 'er', i: 2, ex: 'zum Beispiel der Hund' }, { p: 'sie', i: 2, ex: 'zum Beispiel Lena' }, { p: 'es', i: 2, ex: 'zum Beispiel das Kind' },
+            { p: 'wir', i: 3 }, { p: 'ihr', i: 4 }, { p: 'sie', i: 5, ex: 'zum Beispiel die Kinder' }
+        ];
+        const personCtx = P => (P.i <= 2 ? 'Einzahl – eine Person' : 'Mehrzahl – mehrere Personen') + (P.ex ? ` (${P.ex})` : '');
+        const SGPL = [
+            { t: 'ich', k: 'SG', ctx: 'Ich male.', why: '„ich“ bin nur ich selbst – eine Person. Das ist die Einzahl.' },
+            { t: 'du', k: 'SG', ctx: 'Du malst.', why: 'Mit „du“ spreche ich eine Person an. Das ist die Einzahl.' },
+            { t: 'er', k: 'SG', ctx: 'Der Hund bellt. – Er bellt.', why: '„er“ steht für eine Person oder ein Tier. Das ist die Einzahl.' },
+            { t: 'es', k: 'SG', ctx: 'Das Kind lacht. – Es lacht.', why: '„es“ steht für ein einzelnes Kind oder Ding. Das ist die Einzahl.' },
+            { t: 'sie', k: 'SG', ctx: 'Lena singt. – Sie singt.', why: 'Hier steht „sie“ für eine Person („Lena“). Das ist die Einzahl.' },
+            { t: 'wir', k: 'PLU', ctx: 'Wir malen.', why: '„wir“ steht für mehrere Personen. Das ist die Mehrzahl.' },
+            { t: 'ihr', k: 'PLU', ctx: 'Lea und Tim, ihr malt.', why: 'Mit „ihr“ spreche ich mehrere Personen an. Das ist die Mehrzahl.' },
+            { t: 'sie', k: 'PLU', ctx: 'Die Kinder singen. – Sie singen.', why: 'Hier steht „sie“ für mehrere Personen („die Kinder“). Das ist die Mehrzahl.' }
+        ];
+        function conjItem(verb, forms, P, wrongs) {
+            const right = forms[P.i];
+            const fb = w => {
+                const who = forms.map((f, j) => f === w ? NAMES6[j] : null).filter(Boolean);
+                return who.length ? `„${w}“ gehört zu „${who.join(' / ')}“, nicht zu „${P.p}“.` : `„${w}“ passt nicht zu „${P.p}“.`;
+            };
+            const all = `${verb}: ich ${forms[0]}, du ${forms[1]}, er/sie/es ${forms[2]}, wir ${forms[3]}, ihr ${forms[4]}, sie ${forms[5]}.`;
+            return choice(`${P.p} ___ (${verb})`, right, wrongs.map(w => [w, fb(w)]), all, {
+                good: `${P.p} ${right}.`, ctx: personCtx(P),
+                prompt: 'Welche Form passt? Achte darauf, ob es die Einzahl oder die Mehrzahl ist.'
+            });
+        }
+        const REG = [['malen', 'mal'], ['spielen', 'spiel'], ['kaufen', 'kauf'], ['lachen', 'lach'], ['bauen', 'bau'],
+            ['hören', 'hör'], ['fragen', 'frag'], ['suchen', 'such'], ['machen', 'mach'], ['wohnen', 'wohn']];
+        function buildBeugen() {
+            const drag = [
+                ...shuffle(SGPL.filter(x => x.k === 'SG')).slice(0, 3),
+                ...shuffle(SGPL.filter(x => x.k === 'PLU')).slice(0, 3)
+            ].map(o => ({ ...o, prompt: 'Ist das die Einzahl (eine Person) oder die Mehrzahl (mehrere Personen)?' }));
+            const verbs = shuffle(REG);
+            const core = [0, 1, 2, 3, 4, 5].map(i => pick(PERS.filter(P => P.i === i)));
+            const persons = shuffle([...core, pick(PERS), pick(PERS)]);
+            const items = persons.map((P, n) => {
+                const [inf, st] = verbs[n % verbs.length];
+                const f = [st + 'e', st + 'st', st + 't', st + 'en', st + 't', st + 'en'];
+                const wr = shuffle([...new Set(f.filter(x => x !== f[P.i]))]).slice(0, 2);
+                return conjItem(inf, f, P, wr);
+            });
+            return [...shuffle(drag), ...items];
+        }
+
+        /* =====================================================================
+           Profi-Stufe
+        ===================================================================== */
+
+        /* ---------- Unregelmäßige Verben beugen ---------- */
+        const VT = {
+            sein: ['bin', 'bist', 'ist', 'sind', 'seid', 'sind'],
+            haben: ['habe', 'hast', 'hat', 'haben', 'habt', 'haben'],
+            werden: ['werde', 'wirst', 'wird', 'werden', 'werdet', 'werden'],
+            wissen: ['weiß', 'weißt', 'weiß', 'wissen', 'wisst', 'wissen'],
+            fahren: ['fahre', 'fährst', 'fährt', 'fahren', 'fahrt', 'fahren'],
+            schlafen: ['schlafe', 'schläfst', 'schläft', 'schlafen', 'schlaft', 'schlafen'],
+            tragen: ['trage', 'trägst', 'trägt', 'tragen', 'tragt', 'tragen'],
+            lesen: ['lese', 'liest', 'liest', 'lesen', 'lest', 'lesen'],
+            geben: ['gebe', 'gibst', 'gibt', 'geben', 'gebt', 'geben'],
+            nehmen: ['nehme', 'nimmst', 'nimmt', 'nehmen', 'nehmt', 'nehmen'],
+            sprechen: ['spreche', 'sprichst', 'spricht', 'sprechen', 'sprecht', 'sprechen'],
+            helfen: ['helfe', 'hilfst', 'hilft', 'helfen', 'helft', 'helfen'],
+            sehen: ['sehe', 'siehst', 'sieht', 'sehen', 'seht', 'sehen'],
+            essen: ['esse', 'isst', 'isst', 'essen', 'esst', 'essen']
+        };
+        // [Verb, Person (0=ich … 5=sie), [zwei falsche Formen]]
+        const IRR = [
+            ['sein', 0, ['sein', 'bist']], ['sein', 4, ['sind', 'ist']], ['sein', 3, ['seid', 'bin']], ['sein', 5, ['seid', 'ist']],
+            ['haben', 1, ['habst', 'hat']], ['haben', 2, ['habt', 'haben']], ['haben', 5, ['hat', 'habt']],
+            ['werden', 1, ['werdst', 'wird']], ['werden', 2, ['werdet', 'werde']],
+            ['wissen', 0, ['wisse', 'wissen']], ['wissen', 1, ['wisst', 'weiß']],
+            ['fahren', 1, ['fahrst', 'fahre']], ['fahren', 2, ['fahrt', 'fahre']],
+            ['schlafen', 1, ['schlafst', 'schläft']], ['tragen', 2, ['tragt', 'trage']],
+            ['lesen', 1, ['lest', 'lesst']], ['lesen', 2, ['lest', 'lese']],
+            ['geben', 1, ['gebst', 'gibt']], ['nehmen', 2, ['nehmt', 'nehme']],
+            ['sprechen', 1, ['sprechst', 'spricht']], ['helfen', 2, ['helft', 'helfe']],
+            ['sehen', 1, ['sehst', 'sieht']], ['sehen', 2, ['seht', 'sehe']], ['essen', 1, ['esst', 'esse']]
+        ];
+        function buildIrr() {
+            const used = new Set(), out = [];
+            for (const [v, i, wr] of shuffle(IRR)) {
+                if (used.has(v) || out.length >= 10) continue;
+                used.add(v);
+                const P = i === 2 ? { p: 'er', i: 2, ex: 'zum Beispiel der Hund' } : i === 5 ? { p: 'sie', i: 5, ex: 'zum Beispiel die Kinder' } : { p: NAMES6[i], i };
+                out.push(conjItem(v, VT[v], P, wr));
+            }
+            return out;
+        }
+
+        /* ---------- Schwierige Artikel (nach dem Duden) ---------- */
+        const ga = (k, art, w, rule) => ({
+            t: w, k, why: `Es heißt „${art} ${w}“.${rule ? ' ' + rule : ' Lerne dieses Nomen am besten gleich mit seinem Artikel.'}`, good: `Es heißt „${art} ${w}“.`
+        });
+        const ART_DER = [
+            ga('DER', 'der', 'Löffel'), ga('DER', 'der', 'Schlüssel'), ga('DER', 'der', 'Pinguin'), ga('DER', 'der', 'Käse'),
+            ga('DER', 'der', 'Teddy'), ga('DER', 'der', 'Honig'),
+            ga('DER', 'der', 'Frühling', 'Jahreszeiten sind immer „der“.'), ga('DER', 'der', 'Dienstag', 'Wochentage sind immer „der“.'),
+            ga('DER', 'der', 'Januar', 'Monate sind immer „der“.'),
+            ga('DER', 'der', 'Zwilling', 'Wörter auf -ling sind „der“.'), ga('DER', 'der', 'Schmetterling', 'Wörter auf -ling sind „der“.')
+        ];
+        const ART_DIE = [
+            ga('DIE', 'die', 'Butter'), ga('DIE', 'die', 'Gabel'), ga('DIE', 'die', 'Kartoffel'),
+            ga('DIE', 'die', 'Wohnung', 'Wörter auf -ung sind „die“.'), ga('DIE', 'die', 'Zeitung', 'Wörter auf -ung sind „die“.'),
+            ga('DIE', 'die', 'Freiheit', 'Wörter auf -heit sind „die“.'), ga('DIE', 'die', 'Gesundheit', 'Wörter auf -heit sind „die“.'),
+            ga('DIE', 'die', 'Freundschaft', 'Wörter auf -schaft sind „die“.'), ga('DIE', 'die', 'Höflichkeit', 'Wörter auf -keit sind „die“.')
+        ];
+        const ART_DAS = [
+            ga('DAS', 'das', 'Messer'), ga('DAS', 'das', 'Museum'), ga('DAS', 'das', 'Datum'), ga('DAS', 'das', 'Kissen'), ga('DAS', 'das', 'Ende'),
+            ga('DAS', 'das', 'Kätzchen', 'Wörter auf -chen sind immer „das“.'), ga('DAS', 'das', 'Brötchen', 'Wörter auf -chen sind immer „das“.'),
+            ga('DAS', 'das', 'Märchen', 'Wörter auf -chen sind immer „das“.')
+        ];
+        // Wörter, bei denen der Duden zwei Artikel nennt
+        const ART_BOTH = [
+            { t: 'Joghurt', k: 'DER', ok: ['DER', 'DAS'], why: 'Nach dem Duden heißt es „der Joghurt“ oder „das Joghurt“ – beides ist richtig.', good: 'Nach dem Duden sind „der Joghurt“ und „das Joghurt“ richtig.' },
+            { t: 'Ketchup', k: 'DER', ok: ['DER', 'DAS'], why: 'Nach dem Duden heißt es „der Ketchup“ oder „das Ketchup“ – beides ist richtig.', good: 'Nach dem Duden sind „der Ketchup“ und „das Ketchup“ richtig.' },
+            { t: 'Kaugummi', k: 'DER', ok: ['DER', 'DAS'], why: 'Nach dem Duden heißt es „der Kaugummi“ oder „das Kaugummi“ – beides ist richtig.', good: 'Nach dem Duden sind „der Kaugummi“ und „das Kaugummi“ richtig.' },
+            { t: 'Keks', k: 'DER', ok: ['DER', 'DAS'], why: 'Nach dem Duden heißt es „der Keks“. „Das Keks“ kommt seltener vor, ist aber auch möglich.', good: 'Nach dem Duden ist „der Keks“ üblich. „Das Keks“ ist seltener, aber auch möglich.' },
+            { t: 'Virus', k: 'DAS', ok: ['DAS', 'DER'], why: 'Nach dem Duden heißt es „das Virus“. „Der Virus“ ist auch möglich.', good: 'Nach dem Duden ist „das Virus“ richtig. „Der Virus“ ist auch möglich.' },
+            { t: 'E-Mail', k: 'DIE', ok: ['DIE', 'DAS'], why: 'Nach dem Duden heißt es „die E-Mail“. „Das E-Mail“ ist auch möglich.', good: 'Nach dem Duden ist „die E-Mail“ richtig. „Das E-Mail“ ist auch möglich.' }
+        ];
+        const buildArt = () => shuffle([
+            ...shuffle(ART_DER).slice(0, 3), ...shuffle(ART_DIE).slice(0, 3), ...shuffle(ART_DAS).slice(0, 3),
+            ...shuffle(ART_BOTH).slice(0, 2)
+        ]).map(o => ({ ...o, prompt: 'Welcher Artikel passt nach dem Duden zu diesem Nomen?' }));
+
+        /* ---------- Schwierige Nomen und Adjektive erkennen ---------- */
+        const PROFI_SENT = [
+            'Das:O:Artikel Lachen:NV:das_Lachen der:O:Artikel Kinder:N:die ist:V:sein laut.:A:laut',
+            'Das:O:Artikel Beste:NA:das_Beste kommt:V:kommen zum:O:Verhältniswort Schluss.:N:der',
+            'Beim:O:Verhältniswort Essen:NV:das_Essen ist:V:sein Mia:N:Name still.:A:still',
+            'Der:O:Artikel ruhige:A:ruhig See:N:der liegt:V:liegen im:O:Verhältniswort Nebel.:N:der',
+            'Das:O:Artikel Schwimmen:NV:das_Schwimmen macht:V:machen Jonas:N:Name Spaß.:N:der',
+            'Die:O:Artikel mutige:A:mutig Retterin:N:die hilft:V:helfen dem:O:Artikel Jungen.:N:der_Junge',
+            'Der:O:Artikel hungrige:A:hungrig Bär:N:der sucht:V:suchen Honig.:N:der',
+            'Der:O:Artikel König:N:der ist:V:sein freundlich.:A:freundlich',
+            'Das:O:Artikel Tanzen:NV:das_Tanzen macht:V:machen müde.:A:müde',
+            'Ich:O:Pronomen habe:V:haben Angst.:N:die',
+            'Wir:O:Pronomen lachen:V:lachen und:O:Bindewort singen.:V:singen',
+            'Die:O:Artikel vorsichtige:A:vorsichtig Katze:N:die schleicht:V:schleichen durch:O:Verhältniswort den:O:Artikel Garten.:N:der'
+        ];
+
+        /* ---------- Unregelmäßige Befehlsform ---------- */
+        // [Verb, Satz, richtig, falsch (mit -e o. Ä.), falsch (ihr-Form), Regel]
+        const IMP_P = [
+            ['lesen', 'Du sollst den Text lesen.', 'Lies den Text!', 'Lese den Text!', 'Lest den Text!', 'Das e wird zu ie: lesen → Lies!'],
+            ['helfen', 'Du sollst mir helfen.', 'Hilf mir!', 'Helfe mir!', 'Helft mir!', 'Das e wird zu i: helfen → Hilf!'],
+            ['geben', 'Du sollst mir das Heft geben.', 'Gib mir das Heft!', 'Gebe mir das Heft!', 'Gebt mir das Heft!', 'Das e wird zu i: geben → Gib!'],
+            ['nehmen', 'Du sollst den Apfel nehmen.', 'Nimm den Apfel!', 'Nehme den Apfel!', 'Nehmt den Apfel!', 'Das Verb ändert sich: nehmen → Nimm!'],
+            ['sprechen', 'Du sollst deutlich sprechen.', 'Sprich deutlich!', 'Spreche deutlich!', 'Sprecht deutlich!', 'Das e wird zu i: sprechen → Sprich!'],
+            ['essen', 'Du sollst mehr Obst essen.', 'Iss mehr Obst!', 'Esse mehr Obst!', 'Esst mehr Obst!', 'Das e wird zu i: essen → Iss!'],
+            ['fahren', 'Du sollst vorsichtig fahren.', 'Fahr vorsichtig!', 'Fähr vorsichtig!', 'Fahrt vorsichtig!', 'In der Befehlsform bleibt das a: fahren → Fahr! (nicht „Fähr“).'],
+            ['sein', 'Du sollst mutig sein.', 'Sei mutig!', 'Sein mutig!', 'Seid mutig!', '„sein“ ist ganz besonders: Sei! (eine Person) – Seid! (mehrere Personen).'],
+            ['werfen', 'Du sollst den Stein werfen.', 'Wirf den Stein!', 'Werfe den Stein!', 'Werft den Stein!', 'Das e wird zu i: werfen → Wirf!'],
+            ['schlafen', 'Du sollst jetzt schlafen.', 'Schlaf jetzt!', 'Schläf jetzt!', 'Schlaft jetzt!', 'In der Befehlsform bleibt das a: schlafen → Schlaf! (nicht „Schläf“).'],
+            ['halten', 'Du sollst die Tür halten.', 'Halt die Tür!', 'Hält die Tür!', 'Haltet die Tür!', 'In der Befehlsform bleibt das a: halten → Halt! (nicht „Hält“).'],
+            ['sehen', 'Du sollst das Bild sehen.', 'Sieh das Bild!', 'Sehe das Bild!', 'Seht das Bild!', 'Das e wird zu ie: sehen → Sieh!'],
+            ['vergessen', 'Du sollst den Schlüssel nicht vergessen.', 'Vergiss den Schlüssel nicht!', 'Vergesse den Schlüssel nicht!', 'Vergesst den Schlüssel nicht!', 'Das e wird zu i: vergessen → Vergiss!']
+        ];
+        const buildImpP = () => shuffle(IMP_P).slice(0, 8).map(([v, q, r, w1, w2, rule]) => choice(q, r, [
+            [w1, `Das ist nicht die richtige Befehlsform von „${v}“. ${rule}`],
+            [w2, 'Das ist die Befehlsform für mehrere Personen (ihr). Hier soll nur eine Person (du) etwas tun.']
+        ], rule, {
+            good: `So lautet der Aufforderungssatz: ${r}`,
+            prompt: 'Welcher Satz ist der richtige Aufforderungssatz in der Befehlsform für eine Person (du)?'
+        }));
+
+        /* =====================================================================
+           Spiele und Merkkarten
+        ===================================================================== */
+        const MISSIONS = [
+            {
+                id: 'wortarten', icon: '🍎', title: 'Wortarten-Monster',
+                desc: 'Nomen, Verben und Adjektive sortieren',
+                monsters: ['N', 'V', 'ADJ'], perKind: { N: 4, V: 4, ADJ: 4 }, items: [...NOUNS, ...VERBS, ...ADJS],
+                prompt: 'Zu welchem Monster gehört dieses Wort?',
+                learn: [
+                    { c: 'N', h: 'Nomen = Namenwörter', p: 'Nomen sind Wörter für Menschen, Tiere, Pflanzen, Dinge – und für Gefühle und Gedanken. Du schreibst sie <b>groß</b> und kannst <b>der, die oder das</b> davorsetzen.<br><i>die Katze, das Buch, die Freude</i><br>Auch Namen von Personen sind Nomen: <i>Lena</i>.' },
+                    { c: 'V', h: 'Verben = Tunwörter', p: 'Verben sagen, was jemand <b>tut</b> oder was <b>geschieht</b>. Du schreibst sie <b>klein</b>. Verben verändern sich: <i>ich male – du malst – wir malen</i>.' },
+                    { c: 'A', h: 'Adjektive = Wiewörter', p: 'Adjektive sagen, <b>wie</b> jemand oder etwas ist. Du schreibst sie <b>klein</b>. Du kannst sie vor ein Nomen setzen: <i>die kleine Katze, ein süßer Kuchen</i>.<br>Frage: <i>Wie ist die Suppe? – kalt.</i>' },
+                    { c: 'Y', h: 'Merke', p: '<span class="n">Nomen = blau</span>, <span class="v">Verb = rot</span>, <span class="a">Adjektiv = grün</span>.<br>Mehrzahl der Fachbegriffe: <i>die Nomen, die Verben, die Adjektive</i>.' }
+                ]
+            },
+            {
+                id: 'alle', icon: '🧩', title: 'Alle Wortarten',
+                desc: 'Mit Artikel und Personalpronomen',
+                monsters: ['N', 'ART', 'PRO', 'ADJ', 'V'], perKind: { N: 3, V: 3, ADJ: 3, ART: 2, PRO: 2 }, items: [...NOUNS, ...VERBS, ...ADJS, ...ARTS, ...PROS],
+                prompt: 'Zu welchem Monster gehört dieses Wort?',
+                learn: [
+                    { c: 'Y', h: 'Artikel – der Begleiter', p: 'Artikel stehen vor einem Nomen.<br><b>Bestimmte Artikel:</b> der, die, das<br><b>Unbestimmte Artikel:</b> ein, eine<br><i>der Hund, eine Tasche</i>' },
+                    { c: 'X', h: 'Personalpronomen = persönliche Fürwörter', p: 'Personalpronomen stehen für Personen oder Sachen: <b>ich, du, er, sie, es, wir, ihr, sie</b>.<br><i>Lena lacht. Sie lacht.</i> – „Sie“ steht für „Lena“.' },
+                    { c: 'N', h: 'Und noch einmal zur Erinnerung', p: '<span class="n">Nomen</span> schreibt man groß, <span class="v">Verben</span> sagen, was jemand tut, <span class="a">Adjektive</span> sagen, wie etwas ist.' }
+                ]
+            },
+            {
+                id: 'markieren', icon: '🖍️', title: 'Wörter im Satz',
+                desc: 'Nomen, Verben und Adjektive im Satz markieren',
+                monsters: ['N', 'V', 'ADJ', 'OTH'], sentences: SENTENCES, sentenceCount: 4,
+                prompt: 'Füttere das Monster für das gelb markierte Wort. Das Wort färbt sich dann im Satz.',
+                learn: [
+                    { c: 'Y', h: 'So markierst du', p: '<span class="n">Nomen = blau</span>, <span class="v">Verb = rot</span>, <span class="a">Adjektiv = grün</span>.<br>Alle anderen Wörter markierst du <b>nicht</b>: zum Beispiel Artikel (der, die, das, ein), Wörter wie <i>auf, in, vor</i> und <i>und</i> und Personalpronomen (<i>wir</i>).' },
+                    { c: 'N', h: 'Nomen erkennen', p: 'Du kannst <b>der, die oder das</b> davorsetzen. Auch Namen von Personen sind Nomen: <i>Lena, Jonas</i>.' },
+                    { c: 'V', h: 'Verben erkennen', p: 'Das Wort sagt, was jemand tut. Es verändert sich: <i>ich male, du malst</i>. Auch „<b>ist</b>“ ist ein Verb (von „sein“: ich bin, du bist, er ist).' },
+                    { c: 'A', h: 'Adjektive erkennen', p: 'Das Wort sagt, wie jemand oder etwas ist: <i>die <b>kleine</b> Katze</i>, <i>Das Wasser ist <b>kalt</b>.</i> Adjektive können Endungen haben: <i>klein – kleine – kleinen</i>.' }
+                ]
+            },
+            {
+                id: 'geschlecht', icon: '🏷️', title: 'der, die oder das?',
+                desc: 'Nomen nach ihrem Geschlecht sortieren',
+                monsters: ['DER', 'DIE', 'DAS'], perKind: { DER: 4, DIE: 4, DAS: 4 }, items: GENDER,
+                prompt: 'Welcher Artikel gehört zu diesem Nomen?',
+                learn: [
+                    { c: 'N', h: 'Jedes Nomen hat ein Geschlecht', p: '<b>männlich</b> → <b>der</b> Stuhl<br><b>weiblich</b> → <b>die</b> Tasche<br><b>sächlich</b> → <b>das</b> Haus<br>Das sind die <b>bestimmten Artikel</b>.' },
+                    { c: 'A', h: 'Die Probe', p: 'Setze <b>ein</b> oder <b>eine</b> davor und sprich laut:<br><i>der Stuhl – ein Stuhl, die Tasche – eine Tasche, das Haus – ein Haus</i>.' },
+                    { c: 'Y', h: 'Gut zu wissen', p: 'Das Geschlecht des Wortes sagt nichts darüber, wie etwas „wirklich“ ist: Es heißt <i>das Mädchen</i> – das Nomen ist sächlich.<br>Lerne neue Nomen immer <b>mit Artikel</b>.' },
+                    { c: 'X', h: 'Üben auf Papier', p: 'Denke dir zu jedem Artikel selbst ein Nomen aus und schreibe es mit Artikel auf. Prüfe mit der Probe (ein / eine).' }
+                ]
+            },
+            {
+                id: 'gefuehle', icon: '💭', title: 'Gefühle und Gedanken',
+                desc: 'Nomen, die man nicht anfassen kann',
+                monsters: ['GED', 'DING'], perKind: { GED: 5, DING: 5 }, items: FEEL,
+                prompt: 'Kann man das anfassen – oder ist es ein Gefühl oder ein Gedanke?',
+                learn: [
+                    { c: 'X', h: 'Nomen für Gefühle und Gedanken', p: 'Gefühle und Gedanken kann man <b>nicht sehen oder anfassen</b>. Trotzdem sind es Nomen – man schreibt sie groß.<br><i>die Freude, die Wut, die Idee, der Wunsch</i>' },
+                    { c: 'N', h: 'Nomen für Lebewesen und Dinge', p: 'Menschen, Tiere, Pflanzen und Dinge kann man sehen oder anfassen.<br><i>der Hund, die Lehrerin, der Baum, der Tisch</i>' },
+                    { c: 'Y', h: 'Probe', p: 'Frage dich: Kann ich es in die Hand nehmen? Du kannst eine Katze streicheln – aber die Wut kannst du nicht in die Hand nehmen.' }
+                ]
+            },
+            {
+                id: 'mehrzahl', icon: '🔢', title: 'Einzahl und Mehrzahl',
+                desc: 'Nomen, von denen es keine Mehrzahl gibt',
+                monsters: ['PL', 'NOPL'], perKind: { PL: 5, NOPL: 5 }, items: PLURAL,
+                prompt: 'Gibt es dazu eine Mehrzahl?',
+                learn: [
+                    { c: 'N', h: 'Einzahl und Mehrzahl', p: '<b>Einzahl</b> (Singular): ein Hund<br><b>Mehrzahl</b> (Plural): zwei Hunde<br>Die meisten Nomen haben eine Einzahl und eine Mehrzahl.' },
+                    { c: 'Y', h: 'Manche Nomen haben keine Mehrzahl', p: 'Das gilt zum Beispiel für manche Nomen für Gefühle (<i>die Wut, das Heimweh</i>) und für manche Stoffe und Sammelwörter (<i>der Schnee, das Obst</i>).<br><b>Nicht alle</b> Gefühle haben keine Mehrzahl: <i>die Angst – die Ängste, die Hoffnung – die Hoffnungen</i>.' },
+                    { c: 'A', h: 'Die Probe', p: 'Sage: „<b>zwei …</b>“ oder „<b>viele …</b>“ vor das Nomen.<br><i>zwei Ideen</i> klingt richtig → Mehrzahl möglich.<br>Bei <i>die Wut</i> gibt es keine Mehrzahl.' }
+                ]
+            },
+            {
+                id: 'satzarten', icon: '💬', title: 'Satzarten',
+                desc: 'Aussage-, Frage-, Ausrufe- und Aufforderungssatz',
+                monsters: ['AUSS', 'FRAGE', 'AUSRUF', 'AUFF'], perKind: { AUSS: 3, FRAGE: 3, AUSRUF: 3, AUFF: 3 }, items: SATZ,
+                prompt: 'Welche Satzart ist das?',
+                learn: [
+                    { c: 'N', h: 'Aussagesatz', p: 'Man teilt etwas mit. Am Ende steht ein <b>Punkt ( . )</b>.<br><i>Der Vogel singt.</i>' },
+                    { c: 'Y', h: 'Fragesatz', p: 'Man möchte etwas wissen. Am Ende steht ein <b>Fragezeichen ( ? )</b>.<br><i>Singt der Vogel?</i>' },
+                    { c: 'V', h: 'Ausrufesatz', p: 'Man zeigt ein starkes Gefühl, zum Beispiel Staunen oder Freude. Am Ende steht ein <b>Ausrufezeichen ( ! )</b>.<br><i>Wie schön der Vogel singt!</i>' },
+                    { c: 'X', h: 'Aufforderungssatz (Imperativ)', p: 'Jemand soll etwas tun. Der Satz beginnt oft mit dem Verb in der <b>Befehlsform (Imperativ)</b>. Am Ende steht meist ein <b>Ausrufezeichen ( ! )</b>.<br><i>Sing ein Lied! – Singt ein Lied!</i>' },
+                    { c: 'A', h: 'Gut zu wissen', p: 'Ausrufesatz und Aufforderungssatz enden beide oft mit „!“. Frage dich: Zeigt jemand ein <b>Gefühl</b> (Ausrufesatz) – oder soll jemand etwas <b>tun</b> (Aufforderungssatz)?' }
+                ]
+            },
+            {
+                id: 'imperativ', icon: '📢', title: 'Befehlsform (Imperativ)',
+                desc: 'Aufforderungssätze in die Befehlsform umstellen',
+                monsters: [], build: buildImp,
+                prompt: 'Welcher Satz ist ein Aufforderungssatz in der Befehlsform (Imperativ)?',
+                learn: [
+                    { c: 'X', h: 'Was ist der Imperativ?', p: 'Mit der <b>Befehlsform (Imperativ)</b> sagst du jemandem, was er <b>tun soll</b>. Du bittest, forderst auf oder gibst eine Anweisung.<br><i>Wasch dir die Hände! – Kommt bitte her!</i><br>Ein Satz mit der Befehlsform heißt <b>Aufforderungssatz</b>. Am Ende steht meist ein <b>Ausrufezeichen ( ! )</b>. Mit „bitte“ klingt er freundlicher.' },
+                    {
+                        c: 'N', h: 'So bildest du die Befehlsform', p: `Das Verb steht ganz <b>am Anfang</b>. Die Wörter „du“ und „ihr“ lässt du <b>weg</b>.
+                        <div style="overflow-x:auto"><table>
+                        <tr><th>Grundform</th><th>zu einer Person (du)</th><th>zu mehreren Personen (ihr)</th></tr>
+                        <tr><td>malen</td><td>Mal!</td><td>Malt!</td></tr>
+                        <tr><td>kaufen</td><td>Kauf!</td><td>Kauft!</td></tr>
+                        <tr><td>sein</td><td>Sei!</td><td>Seid!</td></tr>
+                        </table></div>
+                        Bei manchen Verben bleibt ein <b>e</b> am Ende: <i>öffnen → Öffne! – warten → Warte!</i>`
+                    },
+                    { c: 'A', h: 'So stellst du einen Satz um', p: '<i>Du sollst Brot kaufen.</i> → <b>Kauf Brot!</b><br><i>Ihr sollt leise sein.</i> → <b>Seid leise!</b><br>Frage dich: Wer soll etwas tun – <b>eine</b> Person (du) oder <b>mehrere</b> (ihr)? Danach richtet sich die Form.' },
+                    { c: 'Y', h: 'Gut zu wissen', p: 'Ausrufesatz und Aufforderungssatz enden oft beide mit „!“. Beim <b>Aufforderungssatz</b> soll jemand etwas <b>tun</b>.<br>Manche Verben ändern sich in der Befehlsform (<i>lesen → Lies!</i>). Das übst du in der Profi-Stufe.' }
+                ]
+            },
+            {
+                id: 'steigern', icon: '📈', title: 'Adjektive steigern',
+                desc: 'schnell – schneller – am schnellsten',
+                monsters: [], build: buildSteigern,
+                prompt: 'Wie wird das Adjektiv richtig gesteigert?',
+                learn: [
+                    {
+                        c: 'A', h: 'Adjektive kann man steigern', p: `Mit Adjektiven kannst du vergleichen. Dazu steigerst du sie. Es gibt drei Stufen: die <b>Grundstufe</b> (Positiv), die <b>Höherstufe</b> (Komparativ) und die <b>Höchststufe</b> (Superlativ).
+                        <div style="overflow-x:auto"><table>
+                        <tr><th>Grundstufe</th><th>Höherstufe</th><th>Höchststufe</th></tr>
+                        <tr><td>schnell</td><td>schnell<b>er</b></td><td>am schnell<b>sten</b></td></tr>
+                        <tr><td>klein</td><td>klein<b>er</b></td><td>am klein<b>sten</b></td></tr>
+                        </table></div>
+                        <i>Der Hase ist schneller als die Schnecke. – Der Gepard ist am schnellsten.</i>`
+                    },
+                    { c: 'N', h: 'Manchmal ändert sich mehr', p: 'Oft wird aus <b>a, o, u</b> ein <b>ä, ö, ü</b>: <i>alt – älter – am ältesten, groß – größer – am größten, jung – jünger – am jüngsten</i>.<br>Bei Adjektiven, die auf <b>t</b> oder <b>ß</b> enden, kommt in der Höchststufe oft ein <b>e</b> dazu: <i>laut – am lautesten, süß – am süßesten</i>.' },
+                    { c: 'X', h: 'Besondere Adjektive', p: 'Diese musst du dir merken:<br><i>gut – besser – am besten</i><br><i>hoch – höher – am höchsten</i><br><i>nah – näher – am nächsten</i>' },
+                    { c: 'V', h: 'Nicht alle Adjektive lassen sich steigern!', p: 'Manche Adjektive beschreiben etwas, das es nur ganz oder gar nicht gibt. Ein „Mehr“ oder „Weniger“ gibt es dann nicht.<br><i>golden, täglich, viereckig, einzig</i><br>Frage dich: <b>Gibt es ein Mehr oder Weniger?</b> Wenn nicht, kannst du das Adjektiv nicht steigern.' }
+                ]
+            },
+            {
+                id: 'beugen', icon: '🔀', title: 'Verben beugen',
+                desc: 'ich, du, er/sie/es, wir, ihr, sie – Einzahl und Mehrzahl',
+                monsters: ['SG', 'PLU'], build: buildBeugen,
+                prompt: 'Ist das die Einzahl (eine Person) oder die Mehrzahl (mehrere Personen)?',
+                learn: [
+                    { c: 'V', h: 'Verben beugen', p: 'Ein Verb verändert sich, je nachdem, <b>wer</b> etwas tut. Das nennt man <b>beugen</b>.<br>Die <b>Grundform</b> ist zum Beispiel <i>malen</i>. Davon nimmst du den Wortstamm (<b>mal</b>-) und hängst eine Endung an.' },
+                    {
+                        c: 'N', h: 'Einzahl und Mehrzahl', p: `<div style="overflow-x:auto"><table class="conj">
+                        <tr><th></th><th class="sg">🧍 Einzahl (Singular)<br><small>eine Person</small></th><th class="pl">🧍🧍 Mehrzahl (Plural)<br><small>mehrere Personen</small></th></tr>
+                        <tr><th>1. Person</th><td class="sg">ich <b>mal</b>e</td><td class="pl">wir <b>mal</b>en</td></tr>
+                        <tr><th>2. Person</th><td class="sg">du <b>mal</b>st</td><td class="pl">ihr <b>mal</b>t</td></tr>
+                        <tr><th>3. Person</th><td class="sg">er / sie / es <b>mal</b>t</td><td class="pl">sie <b>mal</b>en</td></tr>
+                        </table></div>`
+                    },
+                    { c: 'A', h: 'Achtung bei „sie“', p: '<i>Lena singt. – <b>Sie singt.</b></i> Hier ist „sie“ <b>eine</b> Person: Einzahl.<br><i>Die Kinder singen. – <b>Sie singen.</b></i> Hier ist „sie“ <b>mehrere</b> Personen: Mehrzahl.<br>Die Verbform verrät es dir: <i>singt</i> – <i>singen</i>.' },
+                    { c: 'Y', h: 'Gut zu wissen', p: '<b>er</b> steht zum Beispiel für <i>der Hund</i>, <b>sie</b> für <i>die Katze</i> und <b>es</b> für <i>das Kind</i>.<br>Manche Verben ändern sich noch mehr (zum Beispiel <i>sein: ich bin, du bist</i>). Das übst du in der Profi-Stufe.' }
+                ]
+            },
+            {
+                id: 'fachbegriffe', icon: '📖', title: 'Fachbegriffe',
+                desc: 'Was bedeuten Nomen, Verben, Adjektive …?',
+                monsters: ['N', 'V', 'ADJ', 'PRO', 'IMP'], items: FB, hideSub: true,
+                names: { V: 'Verben', ADJ: 'Adjektive' },
+                prompt: 'Welcher Fachbegriff hat diese deutsche Bedeutung?',
+                learn: [
+                    {
+                        c: 'Y', h: 'Fachbegriffe und ihre deutsche Bedeutung',
+                        p: `<table>
+                        <tr><th>Fachbegriff</th><th>deutsche Bedeutung</th></tr>
+                        <tr><td><span class="n">Nomen</span></td><td>Namenwörter</td></tr>
+                        <tr><td><span class="v">Verben</span></td><td>Tunwörter</td></tr>
+                        <tr><td><span class="a">Adjektive</span></td><td>Wiewörter</td></tr>
+                        <tr><td>Personalpronomen</td><td>persönliche Fürwörter</td></tr>
+                        <tr><td>Imperativ</td><td>Befehlsform</td></tr>
+                    </table>`
+                    },
+                    { c: 'N', h: 'Beispiele', p: '<span class="n">Nomen</span>: <i>Hund, Katze, Freude</i><br><span class="v">Verben</span>: <i>malen, lachen, singen</i><br><span class="a">Adjektive</span>: <i>klein, bunt, schnell</i><br>Personalpronomen: <i>ich, du, wir</i><br>Imperativ: <i>Komm! Lest!</i>' }
+                ]
+            },
+
+            /* ------------------------ Profi-Stufe ------------------------ */
+            {
+                id: 'p_verben', profi: true, icon: '🛠️', title: 'Unregelmäßige Verben',
+                desc: 'bin, hast, liest, fährt … richtig beugen',
+                monsters: [], build: buildIrr,
+                prompt: 'Welche Form passt?',
+                learn: [
+                    { c: 'V', h: 'Unregelmäßige Verben', p: 'Bei manchen Verben ändert sich nicht nur die Endung, sondern auch der <b>Wortstamm</b>. Du musst diese Formen üben.' },
+                    {
+                        c: 'N', h: 'Der Selbstlaut ändert sich', p: `Bei <b>du</b> und <b>er / sie / es</b> ändert sich oft ein Selbstlaut. Bei <b>ich, wir, ihr, sie</b> bleibt der Stamm.
+                        <div style="overflow-x:auto"><table>
+                        <tr><th>Grundform</th><th>ich</th><th>du</th><th>er / sie / es</th><th>wir</th><th>ihr</th><th>sie</th></tr>
+                        <tr><td>lesen</td><td>lese</td><td><b>liest</b></td><td><b>liest</b></td><td>lesen</td><td>lest</td><td>lesen</td></tr>
+                        <tr><td>fahren</td><td>fahre</td><td><b>fährst</b></td><td><b>fährt</b></td><td>fahren</td><td>fahrt</td><td>fahren</td></tr>
+                        <tr><td>geben</td><td>gebe</td><td><b>gibst</b></td><td><b>gibt</b></td><td>geben</td><td>gebt</td><td>geben</td></tr>
+                        </table></div>`
+                    },
+                    {
+                        c: 'X', h: 'Ganz besondere Verben', p: `<div style="overflow-x:auto"><table>
+                        <tr><th>Grundform</th><th>ich</th><th>du</th><th>er / sie / es</th><th>wir</th><th>ihr</th><th>sie</th></tr>
+                        <tr><td>sein</td><td><b>bin</b></td><td><b>bist</b></td><td><b>ist</b></td><td><b>sind</b></td><td><b>seid</b></td><td><b>sind</b></td></tr>
+                        <tr><td>haben</td><td>habe</td><td><b>hast</b></td><td><b>hat</b></td><td>haben</td><td>habt</td><td>haben</td></tr>
+                        <tr><td>werden</td><td>werde</td><td><b>wirst</b></td><td><b>wird</b></td><td>werden</td><td>werdet</td><td>werden</td></tr>
+                        <tr><td>wissen</td><td><b>weiß</b></td><td><b>weißt</b></td><td><b>weiß</b></td><td>wissen</td><td>wisst</td><td>wissen</td></tr>
+                        </table></div>`
+                    },
+                    { c: 'Y', h: 'Tipp', p: 'Lerne unregelmäßige Verben mit den Formen für <b>du</b> und <b>er / sie / es</b>. Dort verstecken sich die meisten Besonderheiten.' }
+                ]
+            },
+            {
+                id: 'p_artikel', profi: true, icon: '🎓', title: 'Schwierige Artikel',
+                desc: 'der, die oder das? Nach dem Duden',
+                monsters: ['DER', 'DIE', 'DAS'], build: buildArt,
+                prompt: 'Welcher Artikel passt nach dem Duden zu diesem Nomen?',
+                learn: [
+                    { c: 'X', h: 'Der Duden hilft', p: 'Im <b>Duden</b> (dem Wörterbuch der deutschen Sprache) steht, welcher Artikel richtig ist. Bei manchen Wörtern nennt der Duden <b>zwei Artikel</b>. Dann sind beide richtig, zum Beispiel <i>der Joghurt – das Joghurt</i>.' },
+                    {
+                        c: 'N', h: 'Diese Wortendungen helfen dir', p: `<div style="overflow-x:auto"><table>
+                        <tr><th>Endung</th><th>Artikel</th><th>Beispiel</th></tr>
+                        <tr><td>-ung, -heit, -keit, -schaft</td><td>die</td><td>die Zeitung, die Freiheit, die Höflichkeit, die Freundschaft</td></tr>
+                        <tr><td>-chen</td><td>das</td><td>das Kätzchen, das Brötchen</td></tr>
+                        <tr><td>-ling</td><td>der</td><td>der Zwilling, der Frühling</td></tr>
+                        <tr><td>Wochentage, Monate, Jahreszeiten</td><td>der</td><td>der Montag, der Mai, der Herbst</td></tr>
+                        </table></div>`
+                    },
+                    { c: 'A', h: 'Wörter mit zwei Artikeln', p: 'Nach dem Duden sind richtig:<br><i>der Joghurt – das Joghurt, der Ketchup – das Ketchup, der Kaugummi – das Kaugummi, das Virus – der Virus, die E-Mail – das E-Mail</i><br>Auch <i>der Keks</i> ist üblich, <i>das Keks</i> ist seltener.' },
+                    { c: 'Y', h: 'Tipp', p: 'Lerne Nomen <b>immer mit Artikel</b>. Wenn du unsicher bist, schlägst du im Wörterbuch nach.' }
+                ]
+            },
+            {
+                id: 'p_erkennen', profi: true, icon: '🔍', title: 'Schwierige Nomen und Adjektive',
+                desc: 'Mit Tricks richtig erkennen und markieren',
+                monsters: ['N', 'V', 'ADJ', 'OTH'], sentences: PROFI_SENT, sentenceCount: 4,
+                prompt: 'Füttere das Monster für das gelb markierte Wort. Das Wort färbt sich dann im Satz.',
+                learn: [
+                    { c: 'N', h: 'Trick für Nomen: die Artikelprobe', p: 'Kannst du <b>der, die oder das</b> davorsetzen? Dann ist es ein Nomen.<br><i>das Lachen, das Schwimmen, das Beste, der Honig, der König</i><br>Auch Verben und Adjektive können zu Nomen werden: <i>lachen → das <b>Lachen</b></i>, <i>beste → das <b>Beste</b></i>. Dann schreibt man sie groß und markiert sie blau.' },
+                    { c: 'A', h: 'Trick für Adjektive: die Wie-Probe', p: 'Frage: <b>Wie ist …?</b> und setze das Wort vor ein Nomen.<br><i>Wie ist der See? – ruhig. Du kannst sagen: der ruhige See.</i><br>Adjektive können eine Endung bekommen: <i>ruhig – ruhige – ruhigen</i>.' },
+                    { c: 'V', h: 'Trick für Verben: die Personenprobe', p: 'Kannst du das Wort verändern? <i>ich lache, du lachst, wir lachen</i> – dann ist es ein Verb.<br>Aber: <i>das Lachen der Kinder</i> – hier steht „das“ davor. Es ist ein Nomen!' },
+                    { c: 'Y', h: 'Achtung, nicht täuschen lassen!', p: 'Auch Nomen können auf <b>-ig</b> enden: <i>der Honig, der König</i>. Und Adjektive können auf <b>-ig</b> oder <b>-lich</b> enden: <i>mutig, freundlich</i>.<br>Verlasse dich deshalb nie nur auf die Endung. <b>Mache immer die Probe!</b>' }
+                ]
+            },
+            {
+                id: 'p_imperativ', profi: true, icon: '🚀', title: 'Unregelmäßige Befehlsform',
+                desc: 'Lies! Gib! Nimm! Sei! Fahr!',
+                monsters: [], build: buildImpP,
+                prompt: 'Welcher Satz ist der richtige Aufforderungssatz in der Befehlsform für eine Person (du)?',
+                learn: [
+                    { c: 'X', h: 'Manche Verben ändern sich', p: 'Bei einigen Verben wird in der Befehlsform für <b>eine Person (du)</b> aus dem <b>e</b> ein <b>i</b> oder <b>ie</b>. Eine Endung -e gibt es dann nicht.' },
+                    {
+                        c: 'N', h: 'Die wichtigsten Verben', p: `<div style="overflow-x:auto"><table>
+                        <tr><th>Grundform</th><th>zu einer Person (du)</th><th>zu mehreren Personen (ihr)</th></tr>
+                        <tr><td>lesen</td><td><b>Lies!</b></td><td>Lest!</td></tr>
+                        <tr><td>geben</td><td><b>Gib!</b></td><td>Gebt!</td></tr>
+                        <tr><td>nehmen</td><td><b>Nimm!</b></td><td>Nehmt!</td></tr>
+                        <tr><td>helfen</td><td><b>Hilf!</b></td><td>Helft!</td></tr>
+                        <tr><td>sprechen</td><td><b>Sprich!</b></td><td>Sprecht!</td></tr>
+                        <tr><td>essen</td><td><b>Iss!</b></td><td>Esst!</td></tr>
+                        <tr><td>sehen</td><td><b>Sieh!</b></td><td>Seht!</td></tr>
+                        <tr><td>sein</td><td><b>Sei!</b></td><td>Seid!</td></tr>
+                        </table></div>`
+                    },
+                    { c: 'A', h: 'Aber kein Umlaut!', p: 'Bei Verben mit <b>a</b> bleibt das a in der Befehlsform, obwohl es bei „du“ einen Umlaut gibt:<br><i>du fährst → <b>Fahr!</b> (nicht „Fähr!“)</i><br><i>du schläfst → <b>Schlaf!</b></i> – <i>du hältst → <b>Halt!</b></i>' },
+                    { c: 'Y', h: 'Tipp', p: 'Die Befehlsform für <b>mehrere Personen (ihr)</b> ist einfach: <i>ihr lest → Lest! ihr gebt → Gebt!</i> Das Wort „ihr“ fällt weg.' }
+                ]
+            }
+        ];
+
+        /* =====================================================================
+           Zustand
+        ===================================================================== */
+        let game = null;
+        let learnFromGame = false;
+        const PRAISE = ['Lecker!', 'Mmh, genau!', 'Richtig!', 'Super!', 'Stimmt!', 'Prima!'];
+
+        const wordEl = $('#word'), ctxEl = $('#ctx'), fbEl = $('#feedback'), sentEl = $('#sentence');
+
+        function show(id) {
+            ['menu', 'learn', 'game', 'result'].forEach(s => $('#' + s).classList.toggle('hidden', s !== id));
+            window.scrollTo(0, 0);
+        }
+
+        function updateStats() {
+            const total = Object.values(save.stars).reduce((a, b) => a + b, 0);
+            $('#stars').textContent = total;
+            $('#level').textContent = levelOf(save.xp);
+            $('#score').textContent = game ? game.points : 0;
+            $('#highscore').textContent = save.highscore;
+        }
+
+        function toast(msg) {
+            const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+            clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        /* ---------- Menü ---------- */
+        const basicMissions = () => MISSIONS.filter(m => !m.profi);
+        const profiUnlocked = () => basicMissions().every(m => (save.stars[m.id] || 0) >= 3);
+
+        function missionBtn(m, locked) {
+            const s = save.stars[m.id] || 0;
+            return `<button class="mission${m.profi ? ' profi' : ''}${locked ? ' locked' : ''}" data-id="${m.id}"${locked ? ' disabled aria-disabled="true"' : ''}>
+                <span class="ico">${locked ? '🔒' : m.icon}</span>
+                <span class="ttl">${esc(m.title)}</span>
+                <span class="dsc">${esc(m.desc)}</span>
+                <span class="st" aria-label="${s} von 3 Sternen">${'⭐'.repeat(s)}${'☆'.repeat(3 - s)}</span>
+            </button>`;
+        }
+
+        function renderMenu() {
+            const basic = basicMissions(), profi = MISSIONS.filter(m => m.profi);
+            const done = basic.filter(m => (save.stars[m.id] || 0) >= 3).length;
+            const open = done === basic.length;
+            $('#missionGrid').innerHTML = basic.map(m => missionBtn(m, false)).join('');
+            $('#profiInfo').innerHTML = open
+                ? '<p class="intro">🎉 <b>Super!</b> Du hast alle Aufgaben mit 3 Sternen geschafft. Hier warten schwierigere Aufgaben auf dich.</p>'
+                : `<div class="lockInfo">🔒 Die Profi-Stufe wird freigeschaltet, sobald du <b>alle</b> Aufgaben oben mit <b>3 Sternen</b> geschafft hast (3 Sterne = kein einziger Fehler). Bisher: <b>${done} von ${basic.length}</b>.</div>`;
+            $('#profiGrid').innerHTML = profi.map(m => missionBtn(m, !open)).join('');
+            $$('.mission:not(:disabled)').forEach(b => b.addEventListener('click', () => openLearn(b.dataset.id, false)));
+            game = null;
+            updateStats();
+            show('menu');
+        }
+
+        /* ---------- Merkkarte ---------- */
+        function openLearn(id, fromGame) {
+            const m = MISSIONS.find(x => x.id === id);
+            if (m.profi && !profiUnlocked()) return;
+            learnFromGame = fromGame;
+            $('#learn').innerHTML = `
+                <h2>${m.icon} ${esc(m.title)} – Merkkarte</h2>
+                ${m.learn.map(c => `<div class="learnCard c${c.c}"><h3>${c.h}</h3><div>${c.p}</div></div>`).join('')}
+                <div class="learnActions">
+                    <button class="btn" id="goBtn">${fromGame ? 'Zurück zum Spiel' : 'Los geht’s! 🍽️'}</button>
+                    ${fromGame ? '' : '<button class="btn ghost" id="menuBtn">← Menü</button>'}
+                </div>`;
+            $('#goBtn').addEventListener('click', () => fromGame ? show('game') : startMission(id));
+            const mb = $('#menuBtn'); if (mb) mb.addEventListener('click', renderMenu);
+            show('learn');
+        }
+
+        /* ---------- Warteschlange ---------- */
+        function buildQueue(m) {
+            if (m.build) return { queue: m.build(), sents: null };
+            if (m.sentences) {
+                const sents = shuffle(m.sentences).slice(0, m.sentenceCount).map(parseSentence);
+                const q = [];
+                sents.forEach((words, si) => words.forEach((w, wi) => q.push({ t: w.t, k: w.k, why: w.why, si, wi })));
+                return { queue: q, sents };
+            }
+            let q = [];
+            if (m.perKind) {
+                for (const k of Object.keys(m.perKind)) {
+                    q.push(...shuffle(m.items.filter(i => i.k === k)).slice(0, m.perKind[k]));
+                }
+            } else q = [...m.items];
+            return { queue: shuffle(q).map(o => ({ ...o })), sents: null };
+        }
+
+        /* ---------- Spielstart ---------- */
+        function startMission(id) {
+            const m = MISSIONS.find(x => x.id === id);
+            if (m.profi && !profiUnlocked()) return;
+            const b = buildQueue(m);
+            game = { m, queue: b.queue, sents: b.sents, i: 0, points: 0, firstTry: 0, missed: [], locked: false, errThis: false, levelBefore: levelOf(save.xp) };
+            $('#missionTitle').textContent = `${m.icon} ${m.title}`;
+            renderMonsters();
+            renderItem();
+            updateStats();
+            show('game');
+        }
+
+        function renderMonsters() {
+            const m = game.m;
+            $('#monsterArea').innerHTML = m.monsters.map((k, i) => {
+                const K = KIND[k];
+                const name = (m.names && m.names[k]) || K.name;
+                return `<button class="monster" data-key="${k}" style="--c:${K.color}" aria-label="${esc(name)}">
+                    <span class="key">${i + 1}</span>
+                    ${monsterSVG(K.color, i + (m.id.length))}
+                    <h2>${esc(name)}</h2>
+                    <small>${m.hideSub ? '' : esc(K.sub)}</small>
+                </button>`;
+            }).join('');
+            $$('.monster').forEach(b => b.addEventListener('click', () => feed(b.dataset.key)));
+        }
+
+        function renderItem() {
+            const it = game.queue[game.i];
+            const isChoice = !!it.opts;
+            game.errThis = false; game.locked = false;
+            $('#prompt').textContent = it.prompt || game.m.prompt;
+            wordEl.textContent = it.t;
+            wordEl.classList.toggle('long', it.t.length > 14);
+            wordEl.classList.toggle('static', isChoice);
+            wordEl.setAttribute('aria-label', (isChoice ? 'Aufgabe: ' : 'Wort: ') + it.t);
+            ctxEl.textContent = it.ctx || '';
+            fbEl.textContent = ''; fbEl.className = '';
+            $('#counter').textContent = `${game.i + 1} von ${game.queue.length}`;
+            $('#progressBar').style.width = (game.i / game.queue.length * 100) + '%';
+            $('#monsterArea').classList.toggle('hidden', isChoice);
+            $('#choiceArea').classList.toggle('hidden', !isChoice);
+            if (isChoice) {
+                $('#choiceArea').innerHTML = it.opts.map((o, i) =>
+                    `<button class="choice" data-i="${i}"><span class="key">${i + 1}</span>${esc(o.t)}</button>`).join('');
+                $$('.choice').forEach(b => b.addEventListener('click', () => choose(+b.dataset.i)));
+            } else $('#choiceArea').innerHTML = '';
+            if (game.sents) {
+                sentEl.classList.remove('hidden');
+                sentEl.innerHTML = game.sents.flatMap((s, si) => si === it.si ? s.map((w, wi) => {
+                    const done = w.done ? ` k-${w.k}` : '';
+                    const cur = wi === it.wi ? ' cur' : '';
+                    return `<span class="w${done}${cur}">${esc(w.txt)}</span>`;
+                }) : []).join('');
+            } else sentEl.classList.add('hidden');
+        }
+
+        /* ---------- Antworten ---------- */
+        // Wort zu einem Monster ziehen oder Monster antippen
+        function feed(key) {
+            if (!game || game.locked) return;
+            const it = game.queue[game.i];
+            if (it.opts) return;
+            const ok = it.ok ? it.ok.includes(key) : key === it.k;
+            grade(ok, $(`.monster[data-key="${key}"]`), it, null);
+        }
+
+        // Antwort bei einer Auswahl-Aufgabe antippen
+        function choose(idx) {
+            if (!game || game.locked) return;
+            const it = game.queue[game.i];
+            if (!it.opts || !it.opts[idx]) return;
+            const btn = $(`.choice[data-i="${idx}"]`);
+            if (btn && btn.disabled) return;
+            grade(it.opts[idx].ok, btn, it, it.opts[idx]);
+        }
+
+        function grade(ok, el, it, opt) {
+            const g = game;
+            if (ok) {
+                g.locked = true;
+                const first = !g.errThis;
+                const gain = first ? 10 : 5;
+                g.points += gain;
+                if (first) g.firstTry++;
+                save.xp += gain;
+                sound('eat');
+                if (el) {
+                    el.classList.add(opt ? 'right' : 'eat');
+                    if (!opt) setTimeout(() => el.classList.remove('eat'), 650);
+                }
+                if (opt) $$('.choice').forEach(b => b.disabled = true);
+                fbEl.className = 'good';
+                const extra = opt ? ` ${it.good || ''} ${it.why || ''}` : ` ${it.good || ''}`;
+                fbEl.textContent = `${pick(PRAISE)}${extra}`.replace(/\s+/g, ' ').trim();
+                if (g.sents) {
+                    g.sents[it.si][it.wi].done = true;
+                    renderSentenceDone(it);
+                }
+                $('#progressBar').style.width = ((g.i + 1) / g.queue.length * 100) + '%';
+                updateStats();
+                const wait = g.sents ? 700 : opt ? Math.min(3800, 1200 + fbEl.textContent.length * 18) : 1000;
+                setTimeout(() => {
+                    if (game !== g) return;
+                    g.i++;
+                    if (g.i >= g.queue.length) finish(); else renderItem();
+                }, wait);
+            } else {
+                g.errThis = true;
+                if (!it.err) { it.err = true; g.missed.push(it); }
+                sound('wrong');
+                if (el) {
+                    if (opt) { el.classList.add('wrong'); el.disabled = true; }
+                    el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope');
+                    setTimeout(() => el.classList.remove('nope'), 500);
+                }
+                wordEl.classList.remove('wiggle'); void wordEl.offsetWidth; wordEl.classList.add('wiggle');
+                fbEl.className = 'bad';
+                fbEl.textContent = opt
+                    ? `Hoppla! ${opt.f || 'Das stimmt nicht.'} Probiere es noch einmal!`
+                    : `Hoppla, das schmeckt diesem Monster nicht. ${it.why} Probiere es noch einmal!`;
+            }
+        }
+
+        function renderSentenceDone(it) {
+            const spans = $$('#sentence .w');
+            const w = game.sents[it.si][it.wi];
+            spans[it.wi].className = `w k-${w.k}`;
+        }
+
+        /* ---------- Ende ---------- */
+        function finish() {
+            const total = game.queue.length, miss = game.missed.length;
+            const rate = miss / total;
+            const stars = miss === 0 ? 3 : rate <= 0.25 ? 2 : 1;
+            const id = game.m.id;
+            const wasOpen = profiUnlocked();
+            if (stars > (save.stars[id] || 0)) save.stars[id] = stars;
+            if (game.points > save.highscore) save.highscore = game.points;
+            persist();
+            const nowOpen = profiUnlocked();
+            const levelNow = levelOf(save.xp);
+            if (levelNow > game.levelBefore) { sound('level'); toast(`🏆 Level ${levelNow} erreicht!`); } else sound('level');
+            if (!wasOpen && nowOpen) toast('🏅 Profi-Stufe freigeschaltet!');
+            updateStats();
+
+            const review = game.missed.length ? `
+                <div class="review"><h3>Das üben wir noch einmal:</h3><ul>
+                ${game.missed.map(it => `<li><b>${esc(it.t)}</b> – ${esc(it.why)}</li>`).join('')}
+                </ul></div>` : '<p><b>Kein einziger Fehler – die Monster sind begeistert!</b></p>';
+            const unlock = (!wasOpen && nowOpen)
+                ? '<p class="unlock">🏅 Du hast alle Aufgaben mit 3 Sternen geschafft – die <b>Profi-Stufe</b> ist jetzt freigeschaltet! Du findest sie im Menü.</p>' : '';
+
+            $('#result').innerHTML = `<div class="box">
+                <h2>Geschafft! 🎉</h2>
+                <div class="bigstars" aria-label="${stars} von 3 Sternen">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+                <p>${game.firstTry} von ${total} Aufgaben gleich beim ersten Mal richtig. Punkte: <b>${game.points}</b></p>
+                ${unlock}
+                ${review}
+                <div class="resActions">
+                    <button class="btn" id="againBtn">Noch einmal</button>
+                    <button class="btn ghost" id="cardBtn">📖 Merkkarte</button>
+                    <button class="btn ghost" id="toMenuBtn">← Menü</button>
+                </div></div>`;
+            $('#againBtn').addEventListener('click', () => startMission(id));
+            $('#cardBtn').addEventListener('click', () => openLearn(id, false));
+            $('#toMenuBtn').addEventListener('click', renderMenu);
+            show('result');
+        }
+
+        /* ---------- Ziehen mit Maus oder Finger ---------- */
+        let drag = null;
+        const monsterAt = (x, y) => {
+            for (const el of document.elementsFromPoint(x, y)) { const m = el.closest && el.closest('.monster'); if (m) return m; }
+            return null;
+        };
+        const clearHover = () => $$('.monster.hover').forEach(m => m.classList.remove('hover'));
+        wordEl.addEventListener('pointerdown', e => {
+            if (!game || game.locked || game.queue[game.i].opts) return;
+            drag = { sx: e.clientX, sy: e.clientY };
+            try { wordEl.setPointerCapture(e.pointerId); } catch (err) { }
+            wordEl.classList.add('dragging');
+        });
+        wordEl.addEventListener('pointermove', e => {
+            if (!drag) return;
+            wordEl.style.transform = `translate(${e.clientX - drag.sx}px, ${e.clientY - drag.sy}px) scale(1.06)`;
+            clearHover();
+            const m = monsterAt(e.clientX, e.clientY); if (m) m.classList.add('hover');
+        });
+        const endDrag = (e, drop) => {
+            if (!drag) return;
+            const m = drop ? monsterAt(e.clientX, e.clientY) : null;
+            drag = null; clearHover();
+            wordEl.classList.remove('dragging'); wordEl.style.transform = '';
+            if (m) feed(m.dataset.key);
+        };
+        wordEl.addEventListener('pointerup', e => endDrag(e, true));
+        wordEl.addEventListener('pointercancel', e => endDrag(e, false));
+
+        /* ---------- Tastatur ---------- */
+        document.addEventListener('keydown', e => {
+            if (!game || $('#game').classList.contains('hidden')) return;
+            const n = parseInt(e.key, 10);
+            const it = game.queue[game.i];
+            if (it.opts) { if (n >= 1 && n <= it.opts.length) choose(n - 1); }
+            else if (n >= 1 && n <= game.m.monsters.length) feed(game.m.monsters[n - 1]);
+        });
+
+        /* ---------- Knöpfe ---------- */
+        $('#backBtn').addEventListener('click', renderMenu);
+        $('#helpBtn').addEventListener('click', () => openLearn(game.m.id, true));
+        $('#muteBtn').addEventListener('click', () => {
+            muted = !muted; $('#muteBtn').textContent = muted ? '🔇' : '🔊';
+        });
+        $('#resetBtn').addEventListener('click', e => {
+            const b = e.currentTarget;
+            if (b.dataset.sure) {
+                save = { xp: 0, highscore: 0, stars: {} }; persist(); delete b.dataset.sure;
+                b.textContent = 'Fortschritt zurücksetzen'; renderMenu();
+            } else {
+                b.dataset.sure = '1'; b.textContent = 'Wirklich alles löschen? Nochmal tippen.';
+                setTimeout(() => { delete b.dataset.sure; b.textContent = 'Fortschritt zurücksetzen'; }, 4000);
+            }
+        });
+
+        renderMenu();
+    </script>
+</body>
+
+</html>
