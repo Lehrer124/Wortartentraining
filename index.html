@@ -209,6 +209,16 @@
         .learnCard table.conj td.pl { background: #fff4e8; }
         .learnCard small { color: var(--muted); font-weight: 400; }
 
+        /* ---------- Abschluss ---------- */
+        #finale { position: fixed; inset: 0; z-index: 200; background: #141830; display: grid; place-items: center; padding: 16px; }
+        #fireworks { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .finaleBox {
+            position: relative; background: rgba(255, 255, 255, .96); border-radius: 24px; padding: 24px 28px; max-width: 560px;
+            text-align: center; box-shadow: 0 12px 40px rgba(0, 0, 0, .4); font-size: 1.2rem; line-height: 1.5;
+        }
+        .finaleBox h2 { margin: 0 0 10px; font-size: 1.7rem; }
+        .finaleBtns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 16px; }
+
         /* ---------- Ergebnis ---------- */
         #result { text-align: center; }
         #result .box { background: var(--card); border-radius: var(--radius); border: 3px solid var(--line); padding: 20px; }
@@ -246,8 +256,7 @@
         <div id="stats">
             <span>⭐ Sterne: <span id="stars">0</span></span>
             <span>🏆 Level: <span id="level">1</span></span>
-            <span>🎯 Punkte: <span id="score">0</span></span>
-            <span>👑 Highscore: <span id="highscore">0</span></span>
+            <span>🏅 Abzeichen: <span id="badges">0</span></span>
             <button id="muteBtn" aria-label="Ton an oder aus" title="Ton an/aus">🔊</button>
         </div>
     </header>
@@ -302,6 +311,19 @@
         <section id="result" class="hidden"></section>
     </main>
 
+    <!-- Abschluss: Feuerwerk -->
+    <div id="finale" class="hidden" role="dialog" aria-modal="true" aria-labelledby="finaleTitle">
+        <canvas id="fireworks" aria-hidden="true"></canvas>
+        <div class="finaleBox">
+            <h2 id="finaleTitle">🎆 Alle Stationen geschafft! 🎆</h2>
+            <p>Du hast alle Stationen mit 3 Sternen gemeistert – richtig stark, du kannst stolz auf dich sein! 🌟</p>
+            <div class="finaleBtns">
+                <button class="btn" id="finaleReset">Zurücksetzen – alles beginnt von vorn</button>
+                <button class="btn ghost" id="finaleClose">Noch nicht</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" role="status"></div>
 
     <script>
@@ -320,7 +342,7 @@
            Speicherstand (localStorage, falls erlaubt)
         ===================================================================== */
         const KEY = 'monsterFutter.v2';
-        let save = { xp: 0, highscore: 0, stars: {} };
+        let save = { xp: 0, stars: {}, badges: {} };
         try { const raw = localStorage.getItem(KEY); if (raw) save = Object.assign(save, JSON.parse(raw)); } catch (e) { }
         const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { } };
         const levelOf = xp => 1 + Math.floor(xp / 100);
@@ -568,28 +590,60 @@
         });
 
         /* ---------- Imperativ: Aufforderungssatz umstellen ---------- */
-        // [Satz, richtiger Imperativsatz, Aussagesatz (falsch), Fragesatz (falsch), Anrede]
+        // [Satz, richtiger Imperativsatz, Imperativ für die andere Anrede (falsch), Aussage mit „!“ (falsch), Anrede]
+        // Alle Antworten enden mit „!“ – das Satzzeichen verrät also nichts.
         const IMP_DATA = [
-            ['Du sollst deine Hände waschen.', 'Wasch deine Hände!', 'Du wäschst deine Hände.', 'Wäschst du deine Hände?', 'du'],
-            ['Du sollst Brot kaufen.', 'Kauf Brot!', 'Du kaufst Brot.', 'Kaufst du Brot?', 'du'],
-            ['Ihr sollt die Aufgaben lesen.', 'Lest die Aufgaben!', 'Ihr lest die Aufgaben.', 'Lest ihr die Aufgaben?', 'ihr'],
-            ['Du sollst leise sein.', 'Sei leise!', 'Du bist leise.', 'Bist du leise?', 'du'],
-            ['Ihr sollt den Müll sammeln.', 'Sammelt den Müll!', 'Ihr sammelt den Müll.', 'Sammelt ihr den Müll?', 'ihr'],
-            ['Du sollst die Fenster öffnen.', 'Öffne die Fenster!', 'Du öffnest die Fenster.', 'Öffnest du die Fenster?', 'du'],
-            ['Ihr sollt leise sein.', 'Seid leise!', 'Ihr seid leise.', 'Seid ihr leise?', 'ihr'],
-            ['Du sollst den Hund rufen.', 'Ruf den Hund!', 'Du rufst den Hund.', 'Rufst du den Hund?', 'du'],
-            ['Ihr sollt ein Lied singen.', 'Singt ein Lied!', 'Ihr singt ein Lied.', 'Singt ihr ein Lied?', 'ihr'],
-            ['Du sollst die Hausaufgaben machen.', 'Mach die Hausaufgaben!', 'Du machst die Hausaufgaben.', 'Machst du die Hausaufgaben?', 'du'],
-            ['Ihr sollt die Blumen gießen.', 'Gießt die Blumen!', 'Ihr gießt die Blumen.', 'Gießt ihr die Blumen?', 'ihr'],
-            ['Du sollst den Fisch fangen.', 'Fang den Fisch!', 'Du fängst den Fisch.', 'Fängst du den Fisch?', 'du']
+            ['Du sollst deine Hände waschen.', 'Wasch deine Hände!', 'Wascht deine Hände!', 'Du wäschst deine Hände!', 'du'],
+            ['Du sollst Brot kaufen.', 'Kauf Brot!', 'Kauft Brot!', 'Du kaufst Brot!', 'du'],
+            ['Ihr sollt die Aufgaben lesen.', 'Lest die Aufgaben!', 'Lies die Aufgaben!', 'Ihr lest die Aufgaben!', 'ihr'],
+            ['Du sollst leise sein.', 'Sei leise!', 'Seid leise!', 'Du bist leise!', 'du'],
+            ['Ihr sollt den Müll sammeln.', 'Sammelt den Müll!', 'Sammle den Müll!', 'Ihr sammelt den Müll!', 'ihr'],
+            ['Du sollst die Fenster öffnen.', 'Öffne die Fenster!', 'Öffnet die Fenster!', 'Du öffnest die Fenster!', 'du'],
+            ['Ihr sollt leise sein.', 'Seid leise!', 'Sei leise!', 'Ihr seid leise!', 'ihr'],
+            ['Du sollst den Hund rufen.', 'Ruf den Hund!', 'Ruft den Hund!', 'Du rufst den Hund!', 'du'],
+            ['Ihr sollt ein Lied singen.', 'Singt ein Lied!', 'Sing ein Lied!', 'Ihr singt ein Lied!', 'ihr'],
+            ['Du sollst die Hausaufgaben machen.', 'Mach die Hausaufgaben!', 'Macht die Hausaufgaben!', 'Du machst die Hausaufgaben!', 'du'],
+            ['Ihr sollt die Blumen gießen.', 'Gießt die Blumen!', 'Gieß die Blumen!', 'Ihr gießt die Blumen!', 'ihr'],
+            ['Du sollst den Fisch fangen.', 'Fang den Fisch!', 'Fangt den Fisch!', 'Du fängst den Fisch!', 'du']
         ];
-        const buildImp = () => shuffle(IMP_DATA).slice(0, 8).map(([q, r, a, f, who]) => choice(q, r, [
-            [a, `Das ist ein Aussagesatz. Bei der Befehlsform steht das Verb am Anfang und „${who}“ fällt weg.`],
-            [f, 'Das ist ein Fragesatz. Er endet mit einem Fragezeichen. Ein Aufforderungssatz sagt, was jemand tun soll.']
-        ], `Bei der Befehlsform steht das Verb am Anfang, das Wort „${who}“ fällt weg und am Ende steht ein Ausrufezeichen.`, {
+        const impConv = ([q, r, other, aus, who]) => choice(q, r, [
+            [other, who === 'du'
+                ? 'Das ist die Befehlsform für mehrere Personen (ihr). Hier soll nur eine Person (du) etwas tun.'
+                : 'Das ist die Befehlsform für eine Person (du). Hier sollen mehrere Personen (ihr) etwas tun.'],
+            [aus, `Hier steht „${who}“ noch im Satz. In der Befehlsform fällt „${who}“ weg.`]
+        ], `Bei der Befehlsform steht das Verb am Anfang und das Wort „${who}“ fällt weg. ${who === 'du' ? 'Hier soll eine Person etwas tun.' : 'Hier sollen mehrere Personen etwas tun.'}`, {
             good: `So lautet der Aufforderungssatz: ${r}`,
-            prompt: 'Stelle den Satz um. Welcher Satz ist ein Aufforderungssatz in der Befehlsform (Imperativ)?'
-        }));
+            ctx: who === 'du' ? 'Eine Person soll etwas tun.' : 'Mehrere Personen sollen etwas tun.',
+            prompt: 'Stelle den Satz um. Welcher Satz ist der richtige Aufforderungssatz in der Befehlsform (Imperativ)?'
+        });
+        // [Satz in Befehlsform, Grundform, Befehlsform selbst (falsch), anderes Verb (falsch)]
+        const IMP_GF = [
+            ['Kauf Brot!', 'kaufen', 'kauf', 'tauchen'],
+            ['Schreib deinen Namen!', 'schreiben', 'schreib', 'schreien'],
+            ['Ruf den Hund!', 'rufen', 'ruf', 'raten'],
+            ['Lies den Text!', 'lesen', 'lies', 'liegen'],
+            ['Sei leise!', 'sein', 'sei', 'sehen']
+        ];
+        const impGf = ([s, g, w1, w2]) => choice(s, g, [
+            [w1, 'Das ist schon die Befehlsform. Gesucht ist die Grundform (Infinitiv).'],
+            [w2, 'Dieses Verb steckt nicht in dem Satz.']
+        ], `Das Verb in „${s}“ hat die Grundform „${g}“.`, {
+            good: `Die Grundform ist „${g}“.`, ctx: 'Das Verb steht am Anfang des Satzes.',
+            prompt: 'Welche Grundform (Infinitiv) hat das Verb in der Befehlsform?'
+        });
+        const AUFF_S = ['Putz bitte deine Schuhe!', 'Hol den Eimer!', 'Schließt die Tür!', 'Gib mir bitte den Stift!', 'Lest den Text leise!', 'Wasch dir die Hände!'];
+        const AUSR_S = ['Das ist ja unglaublich!', 'Wie laut der Donner grollt!', 'Was für ein riesiger Hund!', 'Das schmeckt aber lecker!', 'Wie schön der Regenbogen leuchtet!'];
+        const impAuff = r => choice('Welcher Satz ist ein Aufforderungssatz?', r,
+            shuffle(AUSR_S).slice(0, 2).map(x => [x, 'Das ist ein Ausrufesatz. Hier zeigt jemand ein Gefühl. Niemand soll etwas tun.']),
+            'Beim Aufforderungssatz soll jemand etwas tun. Er beginnt mit dem Verb in der Befehlsform. Ein Ausrufezeichen haben aber beide Satzarten.', {
+                good: `„${r}“ beginnt mit dem Verb in der Befehlsform.`, ctx: 'Alle Sätze enden mit einem Ausrufezeichen.',
+                prompt: 'Achte nicht nur auf das Satzzeichen!'
+            });
+        const buildImp = () => shuffle([
+            ...shuffle(IMP_DATA).slice(0, 4).map(impConv),
+            ...shuffle(IMP_GF).slice(0, 2).map(impGf),
+            ...shuffle(AUFF_S).slice(0, 2).map(impAuff)
+        ]);
 
         /* ---------- Steigern ---------- */
         // [Grundstufe, Höherstufe, Höchststufe, falsche Höherstufe, falsche Höchststufe, Hinweis]
@@ -660,7 +714,7 @@
             { t: 'es', k: 'SG', ctx: 'Das Kind lacht. – Es lacht.', why: '„es“ steht für ein einzelnes Kind oder Ding. Das ist die Einzahl.' },
             { t: 'sie', k: 'SG', ctx: 'Lena singt. – Sie singt.', why: 'Hier steht „sie“ für eine Person („Lena“). Das ist die Einzahl.' },
             { t: 'wir', k: 'PLU', ctx: 'Wir malen.', why: '„wir“ steht für mehrere Personen. Das ist die Mehrzahl.' },
-            { t: 'ihr', k: 'PLU', ctx: 'Lea und Tim, ihr malt.', why: 'Mit „ihr“ spreche ich mehrere Personen an. Das ist die Mehrzahl.' },
+            { t: 'ihr', k: 'PLU', ctx: 'Lea und Ben, ihr malt.', why: 'Mit „ihr“ spreche ich mehrere Personen an. Das ist die Mehrzahl.' },
             { t: 'sie', k: 'PLU', ctx: 'Die Kinder singen. – Sie singen.', why: 'Hier steht „sie“ für mehrere Personen („die Kinder“). Das ist die Mehrzahl.' }
         ];
         function conjItem(verb, forms, P, wrongs) {
@@ -817,6 +871,150 @@
         }));
 
         /* =====================================================================
+           Transfer-Runde: neue Wörter und Sätze, die sonst nirgends vorkommen
+        ===================================================================== */
+        const TR_N = [noun('Fernseher', 'der'), noun('Wiese', 'die'), noun('Flasche', 'die'), noun('Spinne', 'die'), noun('Schrank', 'der')];
+        const TR_V = [verb('wandern', 'ich wandere', 'du wanderst'), verb('zeichnen', 'ich zeichne', 'du zeichnest'), verb('sammeln', 'ich sammle', 'du sammelst'),
+            verb('putzen', 'ich putze', 'du putzt'), verb('winken', 'ich winke', 'du winkst')];
+        const TR_A = [adj('dunkel', 'ein dunkler Raum'), adj('sauber', 'ein sauberes Zimmer'), adj('nass', 'ein nasser Hund'),
+            adj('spitz', 'ein spitzer Stift'), adj('freundlich', 'ein freundlicher Mann')];
+        const STEIG2 = [
+            ['lang', 'länger', 'längsten', 'langer', 'langsten', 'Aus a wird ä.'],
+            ['schwach', 'schwächer', 'schwächsten', 'schwacher', 'schwachsten', 'Aus a wird ä.'],
+            ['breit', 'breiter', 'breitesten', 'breiter', 'breitsten', 'Nach dem t kommt in der Höchststufe ein e dazu.'],
+            ['scharf', 'schärfer', 'schärfsten', 'scharfer', 'scharfsten', 'Aus a wird ä.'],
+            ['dick', 'dicker', 'dicksten', 'dicker', 'dickesten', 'Du hängst nur -er und -sten an.']
+        ];
+        const steigItem = ([g, k, s, ek, es, note]) => choice(
+            `Steigere: ${g}`, `${g} – ${k} – am ${s}`, [
+            [`${g} – mehr ${g} – am meisten ${g}`, 'Adjektive steigerst du nicht mit „mehr“ und „am meisten“. Du hängst -er und -sten an.'],
+            [`${g} – ${ek} – am ${es}`, 'Hier stimmt ein Wortteil nicht: der Umlaut oder die Endung. Schau genau hin!']
+        ], `${g} – ${k} – am ${s}. ${note}`, {
+            good: 'Richtig gesteigert.', ctx: 'Grundstufe – Höherstufe – Höchststufe', prompt: 'Wie wird das Adjektiv richtig gesteigert?'
+        });
+        const IMP_TR = [
+            ['Du sollst die Tür schließen.', 'Schließ die Tür!', 'Schließt die Tür!', 'Du schließt die Tür!', 'du'],
+            ['Ihr sollt den Tisch decken.', 'Deckt den Tisch!', 'Deck den Tisch!', 'Ihr deckt den Tisch!', 'ihr'],
+            ['Ihr sollt ruhig atmen.', 'Atmet ruhig!', 'Atme ruhig!', 'Ihr atmet ruhig!', 'ihr']
+        ];
+        const REG2 = [['turnen', 'turn'], ['lernen', 'lern'], ['zählen', 'zähl'], ['pfeifen', 'pfeif']];
+        const regConj = (inf, st, P) => {
+            const f = [st + 'e', st + 'st', st + 't', st + 'en', st + 't', st + 'en'];
+            return conjItem(inf, f, P, shuffle([...new Set(f.filter(x => x !== f[P.i]))]).slice(0, 2));
+        };
+        function buildTransfer() {
+            const drag = [...shuffle(TR_N).slice(0, 3), ...shuffle(TR_V).slice(0, 3), ...shuffle(TR_A).slice(0, 3)]
+                .map(o => ({ ...o, prompt: 'Zu welchem Monster gehört dieses Wort?' }));
+            return shuffle([
+                ...drag,
+                ...shuffle(STEIG2).slice(0, 2).map(steigItem),
+                ...shuffle(IMP_TR).slice(0, 2).map(impConv),
+                ...shuffle(REG2).slice(0, 2).map(([inf, st]) => regConj(inf, st, pick(PERS)))
+            ]);
+        }
+
+        /* =====================================================================
+           Fehlerdetektiv
+        ===================================================================== */
+        // [Satz mit Fehler, richtiger Satz, zwei falsche Verbesserungen, Erklärung, Hinweis]
+        const DET = [
+            ['Lena lest ein Buch.', 'Lena liest ein Buch.', ['Lena lese ein Buch.', 'Lena lesen ein Buch.'],
+                'Bei „lesen“ wird das e zu ie: ich lese, du liest, sie liest.', 'Eine Person liest.'],
+            ['Der Berg ist hocher als der Hügel.', 'Der Berg ist höher als der Hügel.', ['Der Berg ist mehr hoch als der Hügel.', 'Der Berg ist am höchsten als der Hügel.'],
+                'hoch – höher – am höchsten. Beim Vergleich mit „als“ nimmst du die Höherstufe.', 'Es geht um das Steigern.'],
+            ['Gebe mir bitte den Stift!', 'Gib mir bitte den Stift!', ['Gebt mir bitte den Stift!', 'Du gibst mir bitte den Stift!'],
+                'geben → Gib! In der Befehlsform wird aus e ein i. Eine Endung -e gibt es hier nicht.', 'Eine Person (du) soll etwas tun.'],
+            ['Mia und Ben spielt Fußball.', 'Mia und Ben spielen Fußball.', ['Mia und Ben spielst Fußball.', 'Mia und Ben spiele Fußball.'],
+                'Mia und Ben sind mehrere Personen („sie“). Darum heißt es: sie spielen.', 'Wer spielt? Eine oder mehrere Personen?'],
+            ['Das Kinder spielen im Garten.', 'Die Kinder spielen im Garten.', ['Der Kinder spielen im Garten.', 'Die Kinder spielt im Garten.'],
+                'Die Mehrzahl von „das Kind“ heißt „die Kinder“. Mehrere Kinder spielen: sie spielen.', 'Achte auf den Artikel.'],
+            ['Ich habe Angst vor dem hund.', 'Ich habe Angst vor dem Hund.', ['Ich habe angst vor dem Hund.', 'Ich habe angst vor dem hund.'],
+                '„Hund“ ist ein Nomen (der Hund). „Angst“ ist auch ein Nomen (die Angst). Nomen schreibt man groß.', 'Achte auf die Großschreibung.'],
+            ['Dieser Apfel schmeckt guter als jener.', 'Dieser Apfel schmeckt besser als jener.', ['Dieser Apfel schmeckt mehr gut als jener.', 'Dieser Apfel schmeckt am besten als jener.'],
+                'gut – besser – am besten. Beim Vergleich mit „als“ nimmst du die Höherstufe: besser.', 'Es geht um das Steigern.'],
+            ['Kinder, lies den Text!', 'Kinder, lest den Text!', ['Kinder, lese den Text!', 'Kinder, liest den Text!'],
+                'Mehrere Personen (ihr): ihr lest → Lest! Das Wort „ihr“ fällt weg.', 'Mehrere Personen sollen etwas tun.'],
+            ['Wir ist müde.', 'Wir sind müde.', ['Wir bin müde.', 'Wir seid müde.'],
+                'sein: ich bin, du bist, er ist, wir sind, ihr seid, sie sind.', 'Zu „wir“ passt eine besondere Form.'],
+            ['Er tragt die Tasche.', 'Er trägt die Tasche.', ['Er trage die Tasche.', 'Er tragen die Tasche.'],
+                'tragen: ich trage, du trägst, er trägt. Das a wird zu ä.', 'Eine Person trägt etwas.']
+        ];
+        const buildDet = () => shuffle(DET).slice(0, 8).map(([bad, good, wrongs, why, ctx]) => choice(
+            bad, good, wrongs.map(w => [w, 'Auch in diesem Satz stimmt etwas nicht. Prüfe das Verb, den Artikel oder die Schreibweise noch einmal.']),
+            why, { good: `Richtig: ${good}`, ctx, prompt: 'Im Satz steckt ein Fehler. Welcher Satz ist richtig?' }
+        ));
+
+        /* =====================================================================
+           Karten-Check: Fragen, die man mit Hilfe der Merkkarte beantwortet
+           [Frage, richtige Antwort, [[falsche Antwort, Rückmeldung], …], Erklärung]
+        ===================================================================== */
+        const CHK = {
+            wortarten: [
+                ['Was kannst du vor ein Nomen setzen?', 'der, die oder das', [['ich, du oder wir', 'Das sind Personalpronomen, keine Artikel.'], ['schnell oder langsam', 'Das sind Adjektive. Sie sagen, wie etwas ist.']], 'Vor ein Nomen kannst du der, die oder das setzen: die Katze.'],
+                ['Welche Farbe hat das Nomen beim Markieren?', 'blau', [['rot', 'Rot ist die Farbe für das Verb.'], ['grün', 'Grün ist die Farbe für das Adjektiv.']], 'Nomen = blau, Verb = rot, Adjektiv = grün.']
+            ],
+            alle: [
+                ['Welche Wörter sind bestimmte Artikel?', 'der, die, das', [['ein, eine', 'Das sind die unbestimmten Artikel.'], ['ich, du, er', 'Das sind Personalpronomen.']], 'Bestimmte Artikel: der, die, das. Unbestimmte Artikel: ein, eine.'],
+                ['Wofür steht „Sie“ in: Lena lacht. Sie lacht.', 'für „Lena“', [['für ein Verb', '„Sie“ steht für eine Person, nicht für ein Verb.'], ['für einen Artikel', '„Sie“ ist selbst ein Personalpronomen und steht für Lena.']], 'Personalpronomen stehen für Personen oder Sachen. „Sie“ steht hier für „Lena“.']
+            ],
+            markieren: [
+                ['Welche Wörter markierst du NICHT?', 'Artikel wie der, die, das', [['Nomen', 'Nomen markierst du blau.'], ['Verben', 'Verben markierst du rot.']], 'Artikel, Wörter wie auf, in, vor, und sowie Personalpronomen markierst du nicht.'],
+                ['Ist „ist“ in „Das Wasser ist kalt.“ ein Verb?', 'Ja, es gehört zu „sein“', [['Nein, es ist ein Artikel', 'Artikel sind zum Beispiel der, die, das, ein, eine.'], ['Nein, es ist ein Adjektiv', 'Das Adjektiv ist hier „kalt“.']], 'Auch „ist“ ist ein Verb (von „sein“: ich bin, du bist, er ist).']
+            ],
+            geschlecht: [
+                ['Welcher Artikel gehört zu einem weiblichen Nomen?', 'die', [['der', '„der“ gehört zu männlichen Nomen.'], ['das', '„das“ gehört zu sächlichen Nomen.']], 'männlich → der, weiblich → die, sächlich → das.'],
+                ['Welchen Artikel hat „Mädchen“?', 'das', [['die', 'Das Geschlecht des Wortes sagt nichts darüber, wie etwas „wirklich“ ist.'], ['der', '„der“ gehört zu männlichen Nomen.']], 'Es heißt das Mädchen – das Nomen ist sächlich.']
+            ],
+            gefuehle: [
+                ['Sind Gefühle wie „die Freude“ Nomen?', 'Ja, man schreibt sie groß', [['Nein, weil man sie nicht anfassen kann', 'Gefühle kann man nicht anfassen. Trotzdem sind es Nomen.'], ['Nein, es sind Verben', 'Verben sagen, was jemand tut.']], 'Gefühle und Gedanken kann man nicht anfassen. Trotzdem sind es Nomen.'],
+                ['Wie kannst du ein Nomen erkennen?', 'Du kannst der, die oder das vor das Wort stellen.', [['Man kann es anfassen.', 'Gefühle und Gedanken sind auch Nomen, aber man kann sie nicht anfassen.'], ['Es steht am Satzanfang.', 'Am Satzanfang können auch andere Wörter stehen.']], 'Das ist die Artikelprobe: die Wut, der Mut, das Gefühl. Passt der, die oder das davor, ist es ein Nomen.']
+            ],
+            mehrzahl: [
+                ['Welches Nomen hat keine Mehrzahl?', 'die Wut', [['die Idee', 'Es gibt „die Ideen“.'], ['der Hund', 'Es gibt „die Hunde“.']], 'Von „die Wut“ gibt es keine Mehrzahl.'],
+                ['Welche Probe hilft bei der Mehrzahl?', 'Sage „zwei …“ oder „viele …“ davor', [['Setze „ein“ oder „eine“ davor', 'Das ist die Probe für das Geschlecht.'], ['Setze ein Ausrufezeichen dahinter', 'Das hilft bei der Mehrzahl nicht.']], 'Sage „zwei …“ oder „viele …“ vor das Nomen.']
+            ],
+            satzarten: [
+                ['Womit endet ein Fragesatz?', 'mit einem Fragezeichen', [['mit einem Punkt', 'Der Punkt steht beim Aussagesatz.'], ['mit einem Ausrufezeichen', 'Das Ausrufezeichen steht beim Ausrufesatz und meist beim Aufforderungssatz.']], 'Fragesatz → Fragezeichen.'],
+                ['In welchem Satz soll jemand etwas tun?', 'im Aufforderungssatz', [['im Aussagesatz', 'Im Aussagesatz teilt man etwas mit.'], ['im Ausrufesatz', 'Im Ausrufesatz zeigt man ein starkes Gefühl.']], 'Beim Aufforderungssatz soll jemand etwas tun.']
+            ],
+            imperativ: [
+                ['Was passiert mit „du“ in der Befehlsform?', 'Es fällt weg', [['Es bleibt am Satzanfang', 'In der Befehlsform fällt „du“ weg: Mal!'], ['Es steht am Ende', '„du“ steht in der Befehlsform gar nicht im Satz.']], 'Bei der Befehlsform steht das Verb am Anfang. „du“ und „ihr“ fallen weg.'],
+                ['Wie heißt „sein“ in der Befehlsform für mehrere Personen?', 'Seid!', [['Sei!', '„Sei!“ sagst du zu einer Person.'], ['Sind!', '„sind“ gehört zu „wir“ und „sie“.']], 'sein → Sei! (eine Person) – Seid! (mehrere Personen).']
+            ],
+            steigern: [
+                ['Wie heißt die dritte Stufe bei: schnell – schneller – am schnellsten?', 'Höchststufe', [['Grundstufe', 'Die Grundstufe ist die erste Stufe: schnell.'], ['Höherstufe', 'Die Höherstufe ist die zweite Stufe: schneller.']], 'Es gibt Grundstufe, Höherstufe und Höchststufe.'],
+                ['Welche Adjektive lassen sich nicht steigern?', 'solche, bei denen es kein „Mehr“ oder „Weniger“ gibt', [['alle mit einem e am Ende', 'Das hat nichts mit dem Wortende zu tun.'], ['alle kurzen Adjektive', 'Auch kurze Adjektive lassen sich steigern: alt – älter.']], 'Manche Adjektive beschreiben etwas, das es nur ganz oder gar nicht gibt, zum Beispiel golden oder einzig.']
+            ],
+            beugen: [
+                ['Was bedeutet Mehrzahl bei einem Verb?', 'Es tun mehrere Personen etwas', [['Es tut eine Person etwas', 'Das ist die Einzahl.'], ['Es tut niemand etwas', 'Mit der Mehrzahl meint man mehrere Personen.']], 'Mehrzahl heißt: mehrere Personen.'],
+                ['Welche Form gehört zur Mehrzahl?', 'wir malen', [['ich male', '„ich“ ist eine Person: Einzahl.'], ['du malst', '„du“ ist eine Person: Einzahl.']], 'Mehrzahl: wir malen, ihr malt, sie malen.']
+            ],
+            fachbegriffe: [
+                ['Was bedeutet „Tunwörter“?', 'Verben', [['Nomen', 'Nomen sind Namenwörter.'], ['Adjektive', 'Adjektive sind Wiewörter.']], 'Verben = Tunwörter.'],
+                ['Was bedeutet „Befehlsform“?', 'Imperativ', [['Personalpronomen', 'Personalpronomen sind persönliche Fürwörter.'], ['Nomen', 'Nomen sind Namenwörter.']], 'Imperativ = Befehlsform.']
+            ],
+            p_verben: [
+                ['Wie lautet „du“ bei „lesen“?', 'du liest', [['du lest', '„lest“ gehört zu „ihr“.'], ['du lesst', 'Diese Form gibt es nicht. Das e wird zu ie.']], 'lesen: ich lese, du liest, er liest.'],
+                ['Wie lautet „ich“ bei „sein“?', 'ich bin', [['ich ist', '„ist“ gehört zu „er / sie / es“.'], ['ich sind', '„sind“ gehört zu „wir“ und „sie“.']], 'sein: ich bin, du bist, er ist, wir sind, ihr seid, sie sind.']
+            ],
+            p_artikel: [
+                ['Welchen Artikel haben Wörter auf -ung?', 'die', [['der', 'Wörter auf -ung sind „die“: die Zeitung.'], ['das', '„das“ passt zu Wörtern auf -chen.']], 'Wörter auf -ung sind „die“.'],
+                ['Was gilt nach dem Duden für „Joghurt“?', 'Der Joghurt und das Joghurt sind richtig', [['Nur „der“ ist richtig', 'Der Duden nennt beide Artikel.'], ['Nur „die“ ist richtig', '„die Joghurt“ nennt der Duden nicht.']], 'Nach dem Duden heißt es der Joghurt oder das Joghurt.']
+            ],
+            p_erkennen: [
+                ['Welche Probe zeigt dir ein Nomen?', 'die Artikelprobe', [['die Wie-Probe', 'Die Wie-Probe zeigt Adjektive.'], ['die Personenprobe', 'Die Personenprobe zeigt Verben.']], 'Artikelprobe: Du kannst der, die oder das davorsetzen.'],
+                ['Ist „Lachen“ in „Das Lachen der Kinder“ ein Nomen?', 'Ja, denn „das“ steht davor', [['Nein, es ist ein Verb', 'Hier steht „das“ davor. Darum ist es ein Nomen.'], ['Nein, es ist ein Adjektiv', 'Adjektive sagen, wie etwas ist.']], 'Das Verb „lachen“ wird hier zum Nomen: das Lachen.']
+            ],
+            p_imperativ: [
+                ['Wie lautet „lesen“ in der Befehlsform für eine Person?', 'Lies!', [['Lese!', 'Bei „lesen“ wird das e zu ie.'], ['Lest!', '„Lest!“ sagst du zu mehreren Personen.']], 'lesen → Lies!'],
+                ['Wie lautet „fahren“ in der Befehlsform?', 'Fahr!', [['Fähr!', 'In der Befehlsform bleibt das a.'], ['Fährt!', '„fährt“ gehört zu „er / sie / es“.']], 'fahren → Fahr! (nicht „Fähr“).']
+            ]
+        };
+        const mkCheck = arr => arr.map(([q, right, wrongs, why]) => choice(q, right,
+            wrongs.map(([w, f]) => [w, `${f} Schau noch einmal auf die Merkkarte.`]), why,
+            { good: '', prompt: 'Karten-Check: Beantworte die Frage mit Hilfe der Merkkarte (📖 oben rechts).' }));
+
+        /* =====================================================================
            Spiele und Merkkarten
         ===================================================================== */
         const MISSIONS = [
@@ -875,7 +1073,7 @@
                 learn: [
                     { c: 'X', h: 'Nomen für Gefühle und Gedanken', p: 'Gefühle und Gedanken kann man <b>nicht sehen oder anfassen</b>. Trotzdem sind es Nomen – man schreibt sie groß.<br><i>die Freude, die Wut, die Idee, der Wunsch</i>' },
                     { c: 'N', h: 'Nomen für Lebewesen und Dinge', p: 'Menschen, Tiere, Pflanzen und Dinge kann man sehen oder anfassen.<br><i>der Hund, die Lehrerin, der Baum, der Tisch</i>' },
-                    { c: 'Y', h: 'Probe', p: 'Frage dich: Kann ich es in die Hand nehmen? Du kannst eine Katze streicheln – aber die Wut kannst du nicht in die Hand nehmen.' }
+                    { c: 'Y', h: 'Artikelprobe', p: 'So erkennst du ein Nomen: Du kannst <b>der, die oder das</b> vor das Wort stellen.<br><i>die Wut, der Mut, die Idee, der Hund</i><br>Das gilt auch für Gefühle und Gedanken, obwohl du sie nicht anfassen kannst.' }
                 ]
             },
             {
@@ -912,7 +1110,7 @@
                     {
                         c: 'N', h: 'So bildest du die Befehlsform', p: `Das Verb steht ganz <b>am Anfang</b>. Die Wörter „du“ und „ihr“ lässt du <b>weg</b>.
                         <div style="overflow-x:auto"><table>
-                        <tr><th>Grundform</th><th>zu einer Person (du)</th><th>zu mehreren Personen (ihr)</th></tr>
+                        <tr><th>Grundform (Infinitiv)</th><th>zu einer Person (du)</th><th>zu mehreren Personen (ihr)</th></tr>
                         <tr><td>malen</td><td>Mal!</td><td>Malt!</td></tr>
                         <tr><td>kaufen</td><td>Kauf!</td><td>Kauft!</td></tr>
                         <tr><td>sein</td><td>Sei!</td><td>Seid!</td></tr>
@@ -920,7 +1118,7 @@
                         Bei manchen Verben bleibt ein <b>e</b> am Ende: <i>öffnen → Öffne! – warten → Warte!</i>`
                     },
                     { c: 'A', h: 'So stellst du einen Satz um', p: '<i>Du sollst Brot kaufen.</i> → <b>Kauf Brot!</b><br><i>Ihr sollt leise sein.</i> → <b>Seid leise!</b><br>Frage dich: Wer soll etwas tun – <b>eine</b> Person (du) oder <b>mehrere</b> (ihr)? Danach richtet sich die Form.' },
-                    { c: 'Y', h: 'Gut zu wissen', p: 'Ausrufesatz und Aufforderungssatz enden oft beide mit „!“. Beim <b>Aufforderungssatz</b> soll jemand etwas <b>tun</b>.<br>Manche Verben ändern sich in der Befehlsform (<i>lesen → Lies!</i>). Das übst du in der Profi-Stufe.' }
+                    { c: 'Y', h: 'Woran erkennst du den Aufforderungssatz?', p: 'Er beginnt mit dem <b>Verb in der Befehlsform</b>. „du“ und „ihr“ stehen nicht im Satz. Das Ausrufezeichen allein reicht nicht: Auch ein <b>Ausrufesatz</b> endet mit „!“ (<i>Wie laut der Donner grollt!</i>). Beim Aufforderungssatz soll jemand etwas <b>tun</b>.<br>Manche Verben ändern sich in der Befehlsform (<i>lesen → Lies!</i>). Das übst du in der Profi-Stufe.' }
                 ]
             },
             {
@@ -981,6 +1179,29 @@
                     </table>`
                     },
                     { c: 'N', h: 'Beispiele', p: '<span class="n">Nomen</span>: <i>Hund, Katze, Freude</i><br><span class="v">Verben</span>: <i>malen, lachen, singen</i><br><span class="a">Adjektive</span>: <i>klein, bunt, schnell</i><br>Personalpronomen: <i>ich, du, wir</i><br>Imperativ: <i>Komm! Lest!</i>' }
+                ]
+            },
+
+            {
+                id: 'transfer', icon: '🚀', title: 'Transfer-Runde',
+                desc: 'Neue Wörter und Sätze – zeig, was du kannst!',
+                monsters: ['N', 'V', 'ADJ'], build: buildTransfer,
+                prompt: 'Zu welchem Monster gehört dieses Wort?',
+                learn: [
+                    { c: 'X', h: 'Jetzt zeigst du, was du kannst', p: 'Hier kommen <b>neue Wörter und Sätze</b> vor, die du in den anderen Spielen nicht gesehen hast. Nutze die Proben, die du gelernt hast.' },
+                    { c: 'N', h: 'Deine Proben', p: '<b>Nomen:</b> Kannst du der, die oder das davorsetzen?<br><b>Verb:</b> Kannst du es verändern? <i>ich …, du …, wir …</i><br><b>Adjektiv:</b> Kannst du fragen: <i>Wie ist …?</i><br><b>Steigern:</b> <i>-er</i> und <i>am …-sten</i> – manchmal mit Umlaut.<br><b>Befehlsform:</b> Das Verb steht am Anfang. „du“ und „ihr“ fallen weg.<br><b>Beugen:</b> Ist es die Einzahl oder die Mehrzahl?' },
+                    { c: 'Y', h: 'Tipp', p: 'Wenn du unsicher bist: Sage dir die Probe leise vor, bevor du antwortest. <b>Nicht raten!</b>' }
+                ]
+            },
+            {
+                id: 'detektiv', icon: '🕵️', title: 'Fehlerdetektiv',
+                desc: 'Finde den Fehler im Satz und verbessere ihn',
+                monsters: [], build: buildDet,
+                prompt: 'Im Satz steckt ein Fehler. Welcher Satz ist richtig?',
+                learn: [
+                    { c: 'X', h: 'So findest du Fehler', p: 'Lies den Satz langsam und frage dich:<br>• <b>Wer</b> tut etwas – eine Person oder mehrere? Passt das Verb dazu?<br>• Passt der <b>Artikel</b> zum Nomen?<br>• Sind alle <b>Nomen</b> großgeschrieben?<br>• Ist das Adjektiv richtig <b>gesteigert</b>?<br>• Ist die <b>Befehlsform</b> richtig gebildet?' },
+                    { c: 'V', h: 'Typische Fehler', p: '<i>wir ist</i> statt <i>wir sind</i> – <i>sie lest</i> statt <i>sie liest</i> – <i>hocher</i> statt <i>höher</i> – <i>Gebe!</i> statt <i>Gib!</i> – <i>mit dem hund</i> statt <i>mit dem Hund</i>' },
+                    { c: 'Y', h: 'Tipp', p: 'Sprich die drei Antworten leise. Was klingt falsch? Dann mache die passende Probe.' }
                 ]
             },
 
@@ -1071,6 +1292,8 @@
             }
         ];
 
+        MISSIONS.forEach(m => { if (CHK[m.id]) m.check = () => mkCheck(CHK[m.id]); });
+
         /* =====================================================================
            Zustand
         ===================================================================== */
@@ -1089,8 +1312,7 @@
             const total = Object.values(save.stars).reduce((a, b) => a + b, 0);
             $('#stars').textContent = total;
             $('#level').textContent = levelOf(save.xp);
-            $('#score').textContent = game ? game.points : 0;
-            $('#highscore').textContent = save.highscore;
+            $('#badges').textContent = Object.keys(save.badges || {}).length;
         }
 
         function toast(msg) {
@@ -1128,18 +1350,26 @@
         }
 
         /* ---------- Merkkarte ---------- */
-        function openLearn(id, fromGame) {
+        const checked = new Set();   // Karten-Check in dieser Sitzung schon geschafft
+        function openLearn(id, fromGame, note) {
             const m = MISSIONS.find(x => x.id === id);
             if (m.profi && !profiUnlocked()) return;
             learnFromGame = fromGame;
+            const needCheck = !fromGame && m.check && !checked.has(id);
             $('#learn').innerHTML = `
                 <h2>${m.icon} ${esc(m.title)} – Merkkarte</h2>
+                ${note ? `<p class="unlock">${esc(note)}</p>` : ''}
                 ${m.learn.map(c => `<div class="learnCard c${c.c}"><h3>${c.h}</h3><div>${c.p}</div></div>`).join('')}
                 <div class="learnActions">
-                    <button class="btn" id="goBtn">${fromGame ? 'Zurück zum Spiel' : 'Los geht’s! 🍽️'}</button>
+                    <button class="btn" id="goBtn">${fromGame ? 'Zurück zum Spiel' : needCheck ? 'Weiter zum Karten-Check 📘' : 'Los geht’s! 🍽️'}</button>
                     ${fromGame ? '' : '<button class="btn ghost" id="menuBtn">← Menü</button>'}
                 </div>`;
-            $('#goBtn').addEventListener('click', () => fromGame ? show('game') : startMission(id));
+            $('#goBtn').addEventListener('click', () => {
+                if (fromGame) {
+                    if (game && game.pausedByStreak) { game.pausedByStreak = false; game.locked = false; }
+                    show('game');
+                } else if (needCheck) startCheck(id); else startMission(id);
+            });
             const mb = $('#menuBtn'); if (mb) mb.addEventListener('click', renderMenu);
             show('learn');
         }
@@ -1167,9 +1397,20 @@
             const m = MISSIONS.find(x => x.id === id);
             if (m.profi && !profiUnlocked()) return;
             const b = buildQueue(m);
-            game = { m, queue: b.queue, sents: b.sents, i: 0, points: 0, firstTry: 0, missed: [], locked: false, errThis: false, levelBefore: levelOf(save.xp) };
+            game = { m, queue: b.queue, sents: b.sents, i: 0, points: 0, firstTry: 0, missed: [], locked: false, errThis: false, streak: 0, levelBefore: levelOf(save.xp) };
             $('#missionTitle').textContent = `${m.icon} ${m.title}`;
             renderMonsters();
+            renderItem();
+            updateStats();
+            show('game');
+        }
+
+        /* ---------- Karten-Check (vor dem Spiel) ---------- */
+        function startCheck(id) {
+            const m = MISSIONS.find(x => x.id === id);
+            game = { m, check: true, queue: m.check(), sents: null, i: 0, points: 0, firstTry: 0, missed: [], locked: false, errThis: false, streak: 0, levelBefore: levelOf(save.xp) };
+            $('#missionTitle').textContent = `📘 Karten-Check`;
+            $('#monsterArea').innerHTML = '';
             renderItem();
             updateStats();
             show('game');
@@ -1247,8 +1488,9 @@
                 const first = !g.errThis;
                 const gain = first ? 10 : 5;
                 g.points += gain;
+                g.streak = 0;
                 if (first) g.firstTry++;
-                save.xp += gain;
+                if (!g.check) save.xp += gain;
                 sound('eat');
                 if (el) {
                     el.classList.add(opt ? 'right' : 'eat');
@@ -1284,6 +1526,14 @@
                 fbEl.textContent = opt
                     ? `Hoppla! ${opt.f || 'Das stimmt nicht.'} Probiere es noch einmal!`
                     : `Hoppla, das schmeckt diesem Monster nicht. ${it.why} Probiere es noch einmal!`;
+                // Zwei Fehler hintereinander: erst die Merkkarte lesen
+                g.streak = (g.streak || 0) + 1;
+                if (!g.check && g.streak >= 2) {
+                    g.streak = 0; g.locked = true; g.pausedByStreak = true;
+                    setTimeout(() => {
+                        if (game === g && g.pausedByStreak) openLearn(g.m.id, true, 'Zwei Fehler hintereinander – lies kurz die Merkkarte. Dann klappt es besser!');
+                    }, 1800);
+                }
             }
         }
 
@@ -1295,18 +1545,33 @@
 
         /* ---------- Ende ---------- */
         function finish() {
+            if (game.check) {
+                const cid = game.m.id;
+                checked.add(cid);
+                if (game.missed.length === 0 && !save.badges['karte:' + cid]) {
+                    save.badges['karte:' + cid] = 1; persist(); sound('level'); toast('📘 Abzeichen „Kartenleser“!');
+                }
+                startMission(cid);
+                return;
+            }
             const total = game.queue.length, miss = game.missed.length;
             const rate = miss / total;
             const stars = miss === 0 ? 3 : rate <= 0.25 ? 2 : 1;
             const id = game.m.id;
             const wasOpen = profiUnlocked();
-            if (stars > (save.stars[id] || 0)) save.stars[id] = stars;
-            if (game.points > save.highscore) save.highscore = game.points;
+            const wasAll = allDone();
+            const prev = save.stars[id] || 0;
+            const newBadges = [];
+            if (prev > 0 && stars > prev && !save.badges[`besser:${id}:${stars}`]) {
+                save.badges[`besser:${id}:${stars}`] = 1; newBadges.push('📈 Verbesserer – du hast dich gesteigert!');
+            }
+            if (stars > prev) save.stars[id] = stars;
             persist();
             const nowOpen = profiUnlocked();
             const levelNow = levelOf(save.xp);
             if (levelNow > game.levelBefore) { sound('level'); toast(`🏆 Level ${levelNow} erreicht!`); } else sound('level');
             if (!wasOpen && nowOpen) toast('🏅 Profi-Stufe freigeschaltet!');
+            const finale = !wasAll && allDone();
             updateStats();
 
             const review = game.missed.length ? `
@@ -1319,7 +1584,8 @@
             $('#result').innerHTML = `<div class="box">
                 <h2>Geschafft! 🎉</h2>
                 <div class="bigstars" aria-label="${stars} von 3 Sternen">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
-                <p>${game.firstTry} von ${total} Aufgaben gleich beim ersten Mal richtig. Punkte: <b>${game.points}</b></p>
+                <p>${game.firstTry} von ${total} Aufgaben gleich beim ersten Mal richtig.</p>
+                ${newBadges.map(b => `<p class="unlock">🏅 Neues Abzeichen: ${b}</p>`).join('')}
                 ${unlock}
                 ${review}
                 <div class="resActions">
@@ -1331,6 +1597,7 @@
             $('#cardBtn').addEventListener('click', () => openLearn(id, false));
             $('#toMenuBtn').addEventListener('click', renderMenu);
             show('result');
+            if (finale) setTimeout(showFinale, 700);
         }
 
         /* ---------- Ziehen mit Maus oder Finger ---------- */
@@ -1371,6 +1638,60 @@
             else if (n >= 1 && n <= game.m.monsters.length) feed(game.m.monsters[n - 1]);
         });
 
+        /* ---------- Abschluss: Feuerwerk, Zurücksetzen ---------- */
+        const allDone = () => MISSIONS.every(m => (save.stars[m.id] || 0) >= 3);
+        const fw = { raf: 0, parts: [], onResize: null };
+        function startFireworks() {
+            const cv = $('#fireworks'), cx = cv.getContext('2d');
+            const size = () => { cv.width = window.innerWidth; cv.height = window.innerHeight; };
+            size(); fw.onResize = size; window.addEventListener('resize', size);
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                cx.font = '64px serif'; cx.textAlign = 'center';
+                ['🎆', '🎇', '✨', '🎆', '🎇'].forEach((e, i) => cx.fillText(e, cv.width * (i + 1) / 6, cv.height * (i % 2 ? 0.25 : 0.75)));
+                return;
+            }
+            const colors = ['#ff5252', '#ffd740', '#69f0ae', '#40c4ff', '#e040fb', '#ff9100', '#ffffff'];
+            const burst = () => {
+                const x = cv.width * (0.15 + Math.random() * 0.7), y = cv.height * (0.12 + Math.random() * 0.5), c = pick(colors);
+                for (let i = 0; i < 70; i++) {
+                    const a = Math.random() * Math.PI * 2, v = 1.5 + Math.random() * 4.5;
+                    fw.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, c });
+                }
+            };
+            let next = 0;
+            const loop = ts => {
+                cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = 1;
+                cx.fillStyle = 'rgba(20, 24, 48, .22)'; cx.fillRect(0, 0, cv.width, cv.height);
+                if (ts >= next) { burst(); next = ts + 350 + Math.random() * 500; }
+                cx.globalCompositeOperation = 'lighter';
+                fw.parts = fw.parts.filter(p => p.life > 0);
+                for (const p of fw.parts) {
+                    p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.vx *= 0.985; p.vy *= 0.985; p.life -= 0.013;
+                    cx.globalAlpha = Math.max(p.life, 0); cx.fillStyle = p.c;
+                    cx.beginPath(); cx.arc(p.x, p.y, 2.4, 0, Math.PI * 2); cx.fill();
+                }
+                fw.raf = requestAnimationFrame(loop);
+            };
+            fw.raf = requestAnimationFrame(loop);
+        }
+        function stopFireworks() {
+            cancelAnimationFrame(fw.raf); fw.parts = [];
+            if (fw.onResize) { window.removeEventListener('resize', fw.onResize); fw.onResize = null; }
+        }
+        function showFinale() {
+            $('#finale').classList.remove('hidden');
+            sound('level');
+            startFireworks();
+            $('#finaleReset').focus();
+        }
+        function closeFinale() { stopFireworks(); $('#finale').classList.add('hidden'); }
+        $('#finaleClose').addEventListener('click', () => { closeFinale(); renderMenu(); });
+        $('#finaleReset').addEventListener('click', () => {
+            closeFinale();
+            save = { xp: 0, stars: {}, badges: {} }; persist(); checked.clear();
+            renderMenu(); toast('🌟 Los geht’s – alles beginnt von vorn!');
+        });
+
         /* ---------- Knöpfe ---------- */
         $('#backBtn').addEventListener('click', renderMenu);
         $('#helpBtn').addEventListener('click', () => openLearn(game.m.id, true));
@@ -1380,7 +1701,7 @@
         $('#resetBtn').addEventListener('click', e => {
             const b = e.currentTarget;
             if (b.dataset.sure) {
-                save = { xp: 0, highscore: 0, stars: {} }; persist(); delete b.dataset.sure;
+                save = { xp: 0, stars: {}, badges: {} }; persist(); delete b.dataset.sure;
                 b.textContent = 'Fortschritt zurücksetzen'; renderMenu();
             } else {
                 b.dataset.sure = '1'; b.textContent = 'Wirklich alles löschen? Nochmal tippen.';
